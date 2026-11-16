@@ -1,0 +1,11 @@
+Story,Output Case,Case Type,Shear X,Drift X,Stiff X,Shear Y,Drift Y,Stiff Y
+Story5,EQX,LinStatic,396.0,0.21319,1857.46,0.0,0.0,0.0
+Story5,EQY,LinStatic,0.0,0.0,0.0,396.0,0.18539,2136.07
+Story4,EQX,LinStatic,704.0,0.30795,2286.1,0.0,0.0,0.0
+Story4,EQY,LinStatic,0.0,0.0,0.0,704.0,0.26778,2629.01
+Story3,EQX,LinStatic,924.0,0.34036,2714.74,0.0,0.0,0.0
+Story3,EQY,LinStatic,0.0,0.0,0.0,924.0,0.29597,3121.96
+Story2,EQX,LinStatic,1056.0,0.33594,3143.39,0.0,0.0,0.0
+Story2,EQY,LinStatic,0.0,0.0,0.0,1056.0,0.29212,3614.9
+Story1,EQX,LinStatic,1100.0,0.30795,3572.03,0.0,0.0,0.0
+Story1,EQY,LinStatic,0.0,0.0,0.0,1100.0,0.26778,4107.84

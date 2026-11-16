@@ -1,0 +1,16 @@
+# Render blueprint for the backend API. Frontend is deployed separately on Vercel (root directory: frontend).
+services:
+  - type: web
+    name: story-check-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      - key: CORS_ORIGINS
+        sync: false # set to the Vercel production URL, e.g. https://story-check.vercel.app
+      - key: CORS_ORIGIN_REGEX
+        sync: false # optional
