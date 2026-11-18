@@ -57,6 +57,47 @@ SOFT_EXCEPTION_2_SDC = ("B", "C", "D")  # Exception 2, two-story buildings
 
 _EPS = 1e-9  # guards threshold comparisons against float noise
 
+# project_info keys accepted from the client; anything else is rejected so a misspelt option
+# cannot silently drop out of the check.
+PROJECT_INFO_KEYS = {
+    "building_name", "project_number", "company", "engineer", "checked_by", "report_date",
+    "risk_category", "seismic_design_category", "structure_type", "diaphragm", "analysis_procedure",
+    "drift_is_amplified", "cd", "ie", "moment_frame_rho", "drift_limit_ratio",
+    "apply_soft_story_exception", "torsion_strength_irregular",
+}
+ANALYSIS_PROCEDURES = {
+    "equivalent_lateral_force": "Equivalent lateral force, Section 12.8",
+    "modal_response_spectrum": "Modal response spectrum, Section 12.9.1",
+    "linear_response_history": "Linear response history, Section 12.9.2",
+}
+
+
+def validate_project_info(info: dict) -> None:
+    """Reject unknown keys and malformed values in the client's project_info."""
+    unknown = sorted(set(info) - PROJECT_INFO_KEYS)
+    if unknown:
+        raise ValueError(
+            f"unknown project_info field(s): {', '.join(unknown)}. Accepted fields: {', '.join(sorted(PROJECT_INFO_KEYS))}"
+        )
+    raw = info.get("report_date")
+    if raw is not None:
+        from datetime import date
+
+        try:
+            date.fromisoformat(str(raw))
+        except ValueError:
+            raise ValueError(f"report_date must be an ISO date such as 2026-11-17, got {raw!r}") from None
+
+
+def _bool(info: dict, key: str, default):
+    """A JSON boolean or null; strings such as "false" are rejected rather than read as true."""
+    v = info.get(key)
+    if v is None:
+        return default
+    if not isinstance(v, bool):
+        raise ValueError(f"{key} must be true, false or null, got {v!r}")
+    return v
+
 
 def _worst(statuses):
     return max(statuses, key=_SEVERITY.__getitem__, default=NA)
@@ -102,15 +143,28 @@ class _Settings:
         if self.diaphragm not in ("rigid", "semirigid", "flexible"):
             raise ValueError(f"unknown diaphragm {self.diaphragm!r}")
 
-        self.soft_exception = bool(info.get("apply_soft_story_exception", True))
+        self.procedure = info.get("analysis_procedure")
+        if self.procedure is not None and self.procedure not in ANALYSIS_PROCEDURES:
+            raise ValueError(
+                f"analysis_procedure must be one of {', '.join(ANALYSIS_PROCEDURES)}, got {self.procedure!r}"
+            )
+
+        self.soft_exception = _bool(info, "apply_soft_story_exception", True)
 
         # Section 12.3.2.1.1 strength criterion: more than 75 % of the story's lateral strength on one
-        # side of the center of mass. ETABS story tables do not carry it, so the engineer states it.
+        # side of the center of mass. ETABS story tables do not carry it, so the engineer states it:
+        # true / false for every story, a list of the story names where it is met (false elsewhere),
+        # or null when not evaluated.
         strength = info.get("torsion_strength_irregular")
-        self.torsion_strength = None if strength is None else bool(strength)
+        if isinstance(strength, list):
+            if not all(isinstance(n, str) for n in strength):
+                raise ValueError("torsion_strength_irregular list must contain story names")
+            self.torsion_strength = [n.strip() for n in strength]
+        else:
+            self.torsion_strength = _bool(info, "torsion_strength_irregular", None)
 
         # Drift amplification, Section 12.8.6: Delta = Cd * Delta_e / Ie
-        self.amplified = bool(info.get("drift_is_amplified", False))
+        self.amplified = _bool(info, "drift_is_amplified", False)
         self.ie = float(info.get("ie") or IMPORTANCE_FACTOR[self.risk])
         self.cd = info.get("cd")
         if not self.amplified:
@@ -144,6 +198,12 @@ class _Settings:
         if self.drift_limit <= 0:
             raise ValueError("drift limit must be positive")
 
+    def strength_irregular(self, story_name: str):
+        """True / False when the engineer evaluated the strength criterion for this story, else None."""
+        if isinstance(self.torsion_strength, list):
+            return story_name in self.torsion_strength
+        return self.torsion_strength
+
     def basis(self) -> dict:
         """The parameters actually used, defaults included, for the report."""
         return {
@@ -159,6 +219,7 @@ class _Settings:
             "drift_limit_basis": self.drift_limit_note,
             "apply_soft_story_exception": self.soft_exception,
             "torsion_strength_irregular": self.torsion_strength,
+            "analysis_procedure": ANALYSIS_PROCEDURES.get(self.procedure),
         }
 
 
@@ -167,15 +228,18 @@ def _torsion_actions(tir: float, s: _Settings) -> list[str]:
     actions = []
     if s.sdc in EDGE_DRIFT_SDC:
         actions.append("Amplify accidental torsion by A_x per 12.8.4.3 and confirm the exported drifts include it")
-    elif s.sdc == "B" and tir > TIR_RHO + _EPS:
+    elif s.sdc == "B" and tir is not None and tir > TIR_RHO + _EPS:
         actions.append("Include accidental torsion per 12.8.4.2 (SDC B with TIR > 1.4)")
     if s.sdc in RHO_SDC:
-        actions.append("Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.4")
+        actions.append("Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.5")
         actions.append("Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1")
-        if tir > TIR_RHO + _EPS:
-            actions.append("Use rho = 1.3 per 12.3.4.2 (TIR > 1.4)")
-    if s.sdc in ("E", "F"):
-        actions.append("Apply orthogonal load combination per 12.5")
+        if tir is not None and tir > TIR_RHO + _EPS:
+            actions.append(
+                "Use rho = 1.3 per 12.3.4.2 (TIR > 1.4); confirm in the published text whether it applies "
+                "to this direction only or to both"
+            )
+    if s.sdc in EDGE_DRIFT_SDC:
+        actions.append("Check whether the orthogonal combination requirements of 12.5 apply to this structure")
     return actions
 
 
@@ -191,43 +255,49 @@ def _check_torsion(story: dict, d: str, s: _Settings):
     d_avg = float(story[f"avg_drift_{d}_in"])
     tir = story.get(f"tir_{d}")
     case = story.get(f"tir_{d}_case") or story.get(f"drift_{d}_case")
-    if tir is None:
-        if d_avg <= 0:
-            return _check(check_type, ref, None, TIR_IRREGULAR, None, NA,
-                          "Not computable: average drift is zero in this direction"), False
+    if tir is not None:
+        tir = float(tir)
+        head = f"TIR = Delta_max / Delta_avg = {tir:.3f} (largest over the output cases and steps, governing: {case})"
+    elif d_avg > 0:
         tir = d_max / d_avg
         head = f"TIR = Delta_max / Delta_avg = {d_max:.3f} in / {d_avg:.3f} in = {tir:.3f}"
     else:
-        tir = float(tir)
-        head = f"TIR = Delta_max / Delta_avg = {tir:.3f} (largest over the output cases, governing: {case})"
+        head = "TIR not computable: drift is zero in this direction"
 
-    by_ratio = tir > TIR_IRREGULAR + _EPS
-    by_strength = s.torsion_strength is True
+    strength = s.strength_irregular(story["story_name"])
+    by_ratio = tir is not None and tir > TIR_IRREGULAR + _EPS
+    by_strength = strength is True
+    demand = None if tir is None else round(tir, 4)
+    ratio = None if tir is None else round(tir / TIR_IRREGULAR, 3)
     if by_ratio or by_strength:
         reasons = []
         if by_ratio:
             reasons.append(f"TIR > {TIR_IRREGULAR:.2f}")
         if by_strength:
             reasons.append("more than 75% of the lateral strength is on one side of the center of mass (engineer input)")
-        level = f"; TIR > {TIR_RHO:.2f}" if tir > TIR_RHO + _EPS else ""
+        level = f"; TIR > {TIR_RHO:.2f}" if tir is not None and tir > TIR_RHO + _EPS else ""
         text = f"{head} -> Torsional Irregularity, Type 1 ({' and '.join(reasons)}{level})"
-        return _check(check_type, ref, round(tir, 4), TIR_IRREGULAR, round(tir / TIR_IRREGULAR, 3), WARNING,
-                      text, case, _torsion_actions(tir, s)), True
+        return _check(check_type, ref, demand, TIR_IRREGULAR, ratio, WARNING, text, case,
+                      _torsion_actions(tir, s)), True
 
+    if tir is None:
+        return _check(check_type, ref, None, TIR_IRREGULAR, None, NA, f"Not computable: {head[19:]}"), False
     text = f"{head} <= {TIR_IRREGULAR:.2f} -> No Torsional Irregularity"
-    if s.torsion_strength is None:
+    if strength is None:
         text += ("; strength criterion (more than 75% of lateral strength on one side of the center of mass) "
                  "not evaluated, confirm separately")
-    return _check(check_type, ref, round(tir, 4), TIR_IRREGULAR, round(tir / TIR_IRREGULAR, 3), PASS,
-                  text, case), False
+    else:
+        text += "; strength criterion evaluated by the engineer: not met"
+    return _check(check_type, ref, demand, TIR_IRREGULAR, ratio, PASS, text, case), False
 
 
 def _soft_story_exception(stories: list, d: str, s: _Settings):
     """Section 12.3.2.2: returns (exemption note or None, why-not text, governing drift-ratio factor).
 
     Exception 1: no story drift ratio exceeds 130% of that of the story above; the top two stories
-    are not compared with each other. Drifts come from one output case for the whole building
-    (exc_drift_*), so neighbouring stories are compared under the same loading.
+    are not compared with each other. Each output case that covers every story is checked as one
+    whole-building profile (exc_drifts_*), and the exception is claimed only if every case meets it.
+    Without case data the average drifts are used as a single profile.
     Exception 2: one-story buildings, and two-story buildings in SDC B, C or D.
     """
     if not s.soft_exception:
@@ -238,19 +308,29 @@ def _soft_story_exception(stories: list, d: str, s: _Settings):
     if n < 3:
         return None, "", 0.0
 
-    def drift_ratio(st):
-        return float(st.get(f"exc_drift_{d}_in", st[f"avg_drift_{d}_in"])) / float(st["height_in"])
+    key = f"exc_drifts_{d}"
+    if any(key in st for st in stories):
+        common = set.intersection(*(set(st.get(key) or {}) for st in stories))
+        if not common:
+            return None, "; 12.3.2.2 Exception 1 not evaluated: no output case covers every story", 0.0
+        profiles = {c: [float(st[key][c]) for st in stories] for c in sorted(common)}
+    else:
+        profiles = {None: [float(st[f"avg_drift_{d}_in"]) for st in stories]}
 
-    case = stories[0].get(f"exc_drift_{d}_case")
-    src = f" (average drifts from output case {case}; 12.3.2.2 permits ignoring torsional effects)" if case else ""
-    worst, worst_name = 0.0, ""
-    for lower, upper in zip(stories[: n - 2], stories[1 : n - 1]):
-        above = drift_ratio(upper)
-        if above <= 0:
-            return None, "", 0.0  # cannot form the ratio; do not claim the exception
-        r = drift_ratio(lower) / above
-        if r > worst:
-            worst, worst_name = r, lower["story_name"]
+    worst, worst_name, worst_case = 0.0, "", None
+    for case, drifts in profiles.items():
+        ratios = [dr / float(st["height_in"]) for dr, st in zip(drifts, stories)]
+        for i in range(n - 2):
+            if ratios[i + 1] <= 0:
+                src = f" in output case {case}" if case else ""
+                return None, f"; 12.3.2.2 Exception 1 not evaluated: zero drift above {stories[i]['story_name']}{src}", 0.0
+            r = ratios[i] / ratios[i + 1]
+            if r > worst:
+                worst, worst_name, worst_case = r, stories[i]["story_name"], case
+    src = ""
+    if worst_case:
+        src = (f" (average drifts, worst of {len(profiles)} output case(s): {worst_case}; "
+               "12.3.2.2 permits ignoring torsional effects)")
     if worst <= SOFT_EXCEPTION_DRIFT_RATIO + _EPS:
         return (
             f"does not apply per 12.3.2.2 Exception 1: largest story drift ratio is {worst:.2f} x "
@@ -346,6 +426,11 @@ def _check_drift(story: dict, d: str, s: _Settings, torsion_irregular: bool):
     use_max = torsion_irregular and s.sdc in EDGE_DRIFT_SDC
     raw = float(story[f"max_drift_{d}_in" if use_max else f"avg_drift_{d}_in"])
     where = "edge (max), torsionally irregular" if use_max else "center of mass, approximated by avg of ends"
+    case = story.get(f"drift_max_{d}_case" if use_max else f"drift_{d}_case") or story.get(f"drift_{d}_case")
+    check_type = f"Allowable Story Drift ({d.upper()}-Dir)"
+    if float(story[f"max_drift_{d}_in"]) <= 0:
+        return _check(check_type, s.drift_ref, None, round(s.drift_limit, 5), None, NA,
+                      "Not computable: drift is zero in this direction, which usually means an export error", case)
 
     if s.amplified:
         design = raw
@@ -361,8 +446,12 @@ def _check_drift(story: dict, d: str, s: _Settings, torsion_irregular: bool):
         f"{'<=' if ok else '>'} {s.drift_limit:.4f} ({s.drift_limit_note})"
     )
     actions = () if ok else ["Stiffen the structure or revise the design until the story drift is within the limit"]
-    return _check(f"Allowable Story Drift ({d.upper()}-Dir)", s.drift_ref, round(ratio, 5), round(s.drift_limit, 5),
-                  round(ratio / s.drift_limit, 3), PASS if ok else FAIL, text, story.get(f"drift_{d}_case"), actions)
+    return _check(check_type, s.drift_ref, round(ratio, 5), round(s.drift_limit, 5),
+                  round(ratio / s.drift_limit, 3), PASS if ok else FAIL, text, case, actions)
+
+
+def _not_evaluated(c: dict) -> bool:
+    return c["status"] == NA and c["formula_breakdown"].startswith(("Not computable", "Not checked"))
 
 
 def _has(story: dict, d: str) -> bool:
@@ -402,6 +491,11 @@ def check_building(data: dict) -> dict:
         raise ValueError("stories have no drift data in either direction")
     for story in stories:
         _validate_story(story, directions)
+    if isinstance(settings.torsion_strength, list):
+        names = {st["story_name"] for st in stories}
+        unknown = [n for n in settings.torsion_strength if n not in names]
+        if unknown:
+            raise ValueError(f"torsion_strength_irregular names unknown stories: {', '.join(unknown)}")
 
     exceptions = {d: _soft_story_exception(stories, d, settings) for d in directions}
 
@@ -437,7 +531,8 @@ def check_building(data: dict) -> dict:
         )
 
     all_checks = [c for r in story_results for c in r["checks"]]
-    drift_dc = [c["dc_ratio"] for c in all_checks if c["check_type"].startswith("Allowable Story Drift")]
+    drift_dc = [c["dc_ratio"] for c in all_checks
+                if c["check_type"].startswith("Allowable Story Drift") and c["dc_ratio"] is not None]
     triggered: dict[str, list[str]] = {}  # action -> stories that triggered it, in first-seen order
     for r in story_results:
         for c in r["checks"]:
@@ -454,6 +549,9 @@ def check_building(data: dict) -> dict:
             "total_violations": sum(c["status"] == FAIL for c in all_checks),
             "total_warnings": sum(c["status"] == WARNING for c in all_checks),
             "total_not_applicable": sum(c["status"] == NA for c in all_checks),
+            # N/A because the data could not support the check (as opposed to not applicable by code):
+            # the overall status then covers only the checks that ran.
+            "total_not_evaluated": sum(_not_evaluated(c) for c in all_checks),
             # Drift checks only: the one ratio that is a true demand / capacity.
             "max_dc_ratio": max(drift_dc, default=0.0),
             "action_items": action_items,

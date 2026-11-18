@@ -140,9 +140,16 @@ def sample_result(folder: str | Path) -> dict:
     from backend.code_checker import check_building
     from backend.parser import parse_etabs
 
+    import hashlib
+
     folder = Path(folder)
     info = json.loads((folder / "project.json").read_text())
-    building = parse_etabs(sorted(folder.glob("*.csv")), info)
+    paths = sorted(folder.glob("*.csv"))
+    building = parse_etabs(paths, info)
+    building["project_info"]["input_files"] = [
+        {"name": p.name, "bytes": len(b), "sha256": hashlib.sha256(b).hexdigest()}
+        for p, b in ((p, p.read_bytes()) for p in paths)
+    ]
     result = check_building(building)
     result["project_info"] = building["project_info"]
     return result

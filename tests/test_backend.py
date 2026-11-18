@@ -129,10 +129,12 @@ def test_tir_is_the_largest_over_cases_not_the_largest_drift_case():
 def test_step_type_min_rows_and_item_direction():
     t = simple_tables()
     drifts = t[1].drop(columns=["direction"]).assign(item=lambda d: "Diaph D1 " + d["case"].str[-1], step_type="Max")
-    mins = drifts.assign(step_type="Min", max_drift="9.9", avg_drift="9.0")
+    mins = drifts.assign(step_type="Min", max_drift="-9.9", avg_drift="-9.0")
     t[1] = pd.concat([drifts, mins], ignore_index=True)
     s1 = parse_etabs(t, {"risk_category": "II"})["stories"][0]
-    assert s1["max_drift_x_in"] == 0.33 and s1["max_drift_y_in"] == 0.33
+    # Codex N3: a Min row larger in magnitude than the Max row governs.
+    assert s1["max_drift_x_in"] == 9.9 and s1["avg_drift_y_in"] == 9.0
+    assert s1["drift_x_case"].endswith("(Min)")
 
 
 def test_excel_workbook_with_all_tables_on_separate_sheets():
@@ -373,3 +375,78 @@ def test_frontend_precomputed_samples_match_the_engine():
     for spec in BUILDINGS:
         stored = json.loads((Path("frontend/public/samples") / spec["folder"] / "result.json").read_text())
         assert stored == json.loads(json.dumps(sample_result(Path("data") / spec["folder"])))
+
+
+# ---------- Round-2 review fixes ----------
+
+
+def drift_case_tables(rows, n=2, h=100):
+    """rows: (story, case, direction, max, avg[, extra]); stories S1..Sn of height h, stiffness uniform."""
+    stories = [{"Story": f"S{i}", "Height": h} for i in range(n, 0, -1)]
+    drifts = [dict(zip(("Story", "Output Case", "Direction", "Max Drift", "Avg Drift"), r[:5]), **(r[5] if len(r) > 5 else {}))
+              for r in rows]
+    stiff = [{"Story": f"S{i}", "Output Case": "EQX", "Stiff X": 1000, "Stiff Y": 1000} for i in range(n, 0, -1)]
+    return [csv_table(t) for t in tables(stories, drifts, stiff)]
+
+
+def test_drift_envelope_takes_max_and_avg_separately():
+    # Codex N1: A has the larger Max, B the larger Avg; B must govern the center-of-mass drift.
+    rows = [(s, c, "X", mx, av) for s in ("S1", "S2") for c, mx, av in (("A", 2.1, 1.8), ("B", 2.05, 2.04))]
+    b = parse_etabs(drift_case_tables(rows), {"risk_category": "II"})
+    s1 = b["stories"][0]
+    assert s1["avg_drift_x_in"] == 2.04 and s1["drift_x_case"] == "B"
+    assert s1["max_drift_x_in"] == 2.1 and s1["drift_max_x_case"] == "A"
+    res = check_building({**b, "project_info": {**b["project_info"], "cd": 1, "ie": 1}})
+    c = next(c for c in res["story_results"][0]["checks"] if c["check_type"] == "Allowable Story Drift (X-Dir)")
+    assert c["status"] == "FAIL" and c["demand_value"] == pytest.approx(0.0204) and c["output_case"] == "B"
+
+
+def test_tir_envelope_over_steps_of_one_case():
+    # Codex N2: one case name, two steps; step 2 has TIR 2.0.
+    rows = [(s, "EQX", "X", 1.0, 1.0, {"Step Number": 1}) for s in ("S1", "S2")]
+    rows.append(("S1", "EQX", "X", 0.5, 0.25, {"Step Number": 2}))
+    s1 = parse_etabs(drift_case_tables(rows), {"risk_category": "II"})["stories"][0]
+    assert s1["tir_x"] == 2.0 and s1["tir_x_case"] == "EQX step 2"
+
+
+def test_every_drift_row_is_validated():
+    # Codex N6: a non-governing row with Max > 0 and Avg = 0 is still rejected.
+    rows = [(s, "EQX", "X", 1.0, 0.9) for s in ("S1", "S2")] + [("S1", "BAD", "X", 0.1, 0.0)]
+    with pytest.raises(ValueError, match=r"S1, X, BAD.*Avg Drift is zero"):
+        parse_etabs(drift_case_tables(rows), {"risk_category": "II"})
+
+
+def test_exception_profiles_per_case_from_parser():
+    rows = [(f"S{i}", c, "X", v, v) for c, vals in (("A", (1, 1, 1)), ("B", (0.9, 0.1, 0.1))) for i, v in zip((1, 2, 3), vals)]
+    b = parse_etabs(drift_case_tables(rows, n=3), {"risk_category": "II"})
+    assert b["stories"][0]["exc_drifts_x"] == {"A": 1.0, "B": 0.9}
+    assert b["project_info"]["exception_output_cases"] == {"x": ["A", "B"]}
+
+
+def test_zero_drift_story_warns():
+    rows = [("S1", "EQX", "X", 0.0, 0.0), ("S2", "EQX", "X", 1.0, 0.9)]
+    info = parse_etabs(drift_case_tables(rows), {"risk_category": "II"})["project_info"]
+    assert any("Zero X-direction drift at S1" in w for w in info["input_warnings"])
+
+
+def test_analyze_rejects_unknown_project_info_field(data):
+    info = json.loads((data / "15_story_tower" / "project.json").read_text())
+    resp = post_analyze(data, "15_story_tower", project_info=json.dumps({**info, "moment_frame_roh": 1.3}))
+    assert resp.status_code == 422 and "moment_frame_roh" in resp.json()["detail"]
+
+
+def test_analyze_records_input_files(data):
+    info = post_analyze(data, "15_story_tower").json()["project_info"]
+    files = {f["name"]: f for f in info["input_files"]}
+    assert "story_stiffness.csv" in files and len(files["story_stiffness.csv"]["sha256"]) == 64
+
+
+def test_report_rejects_non_iso_date_and_prints_inputs(data):
+    result = post_analyze(data, "15_story_tower").json()
+    bad = {**result, "project_info": {**result["project_info"], "report_date": "November 17, 2026"}}
+    assert client.post("/api/export-report", json=bad).status_code == 422
+    doc = Document(io.BytesIO(client.post("/api/export-report", json=result).content))
+    cells = "\n".join(c.text for t in doc.tables for row in t.rows for c in row.cells)
+    assert "story_stiffness.csv" in cells and "SHA-256" in cells
+    first_row = doc.tables[1].rows[0]._tr.xml
+    assert "tblHeader" in first_row and "cantSplit" in doc.tables[1].rows[1]._tr.xml

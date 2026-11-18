@@ -6,6 +6,7 @@
     "total_violations": 0,
     "total_warnings": 1,
     "total_not_applicable": 0,
+    "total_not_evaluated": 0,
     "max_dc_ratio": 0.77,
     "action_items": [
       {
@@ -15,13 +16,19 @@
         ]
       },
       {
-        "action": "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.4",
+        "action": "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.5",
         "stories": [
           "Story2"
         ]
       },
       {
         "action": "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1",
+        "stories": [
+          "Story2"
+        ]
+      },
+      {
+        "action": "Check whether the orthogonal combination requirements of 12.5 apply to this structure",
         "stories": [
           "Story2"
         ]
@@ -41,6 +48,7 @@
     "drift_limit_basis": "Table 12.12-1, Risk Category II",
     "apply_soft_story_exception": true,
     "torsion_strength_irregular": null,
+    "analysis_procedure": null,
     "directions_checked": [
       "X",
       "Y"
@@ -67,7 +75,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.9,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.333 in / 0.308 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.080 (largest over the output cases and steps, governing: EQX) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQX",
           "actions": []
         },
@@ -100,7 +108,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.875,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.281 in / 0.268 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.050 (largest over the output cases and steps, governing: EQY) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQY",
           "actions": []
         },
@@ -148,12 +156,13 @@
           "capacity_limit": 1.2,
           "dc_ratio": 1.083,
           "status": "WARNING",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.437 in / 0.336 in = 1.300 -> Torsional Irregularity, Type 1 (TIR > 1.20)",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.300 (largest over the output cases and steps, governing: EQX) -> Torsional Irregularity, Type 1 (TIR > 1.20)",
           "output_case": "EQX",
           "actions": [
             "Amplify accidental torsion by A_x per 12.8.4.3 and confirm the exported drifts include it",
-            "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.4",
-            "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1"
+            "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.5",
+            "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1",
+            "Check whether the orthogonal combination requirements of 12.5 apply to this structure"
           ]
         },
         {
@@ -185,7 +194,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.875,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.307 in / 0.292 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.050 (largest over the output cases and steps, governing: EQY) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQY",
           "actions": []
         },
@@ -233,7 +242,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.9,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.368 in / 0.340 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.080 (largest over the output cases and steps, governing: EQX) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQX",
           "actions": []
         },
@@ -266,7 +275,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.875,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.311 in / 0.296 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.050 (largest over the output cases and steps, governing: EQY) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQY",
           "actions": []
         },
@@ -314,7 +323,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.9,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.333 in / 0.308 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.080 (largest over the output cases and steps, governing: EQX) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQX",
           "actions": []
         },
@@ -347,7 +356,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.875,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.281 in / 0.268 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.050 (largest over the output cases and steps, governing: EQY) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQY",
           "actions": []
         },
@@ -395,7 +404,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.9,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.230 in / 0.213 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.080 (largest over the output cases and steps, governing: EQX) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQX",
           "actions": []
         },
@@ -417,7 +426,7 @@
           "capacity_limit": 1.2,
           "dc_ratio": 0.875,
           "status": "PASS",
-          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.195 in / 0.185 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 1.050 (largest over the output cases and steps, governing: EQY) <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
           "output_case": "EQY",
           "actions": []
         },
@@ -453,13 +462,42 @@
         "EQY"
       ]
     },
-    "exception_output_case": {
-      "x": "EQX",
-      "y": "EQY"
+    "torsion_output_cases": {
+      "x": [
+        "EQX"
+      ],
+      "y": [
+        "EQY"
+      ]
+    },
+    "exception_output_cases": {
+      "x": [
+        "EQX"
+      ],
+      "y": [
+        "EQY"
+      ]
     },
     "stiffness_output_case": {
       "x": "EQX",
       "y": "EQY"
-    }
+    },
+    "input_files": [
+      {
+        "name": "story_definitions.csv",
+        "bytes": 131,
+        "sha256": "dfbac2ad75eb425cd1c52c69fc40d9b1987abe39ae5de3a43190ce0af62493e7"
+      },
+      {
+        "name": "story_max_over_avg_drifts.csv",
+        "bytes": 503,
+        "sha256": "8fa271ba9f791a96adc7726b7a5ed663ee15fe41e90d5f31848916b0ebf37925"
+      },
+      {
+        "name": "story_stiffness.csv",
+        "bytes": 628,
+        "sha256": "16cd64488761472afd37ff6287ec850e72608ff17a0ae5d9b29934d78e8cfa2e"
+      }
+    ]
   }
 }

@@ -189,8 +189,31 @@ export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSamp
             onChange={(e) => onForm({ torsion_strength: e.target.value as ProjectForm["torsion_strength"] })}
           >
             <option value="unknown">Not evaluated</option>
-            <option value="no">No</option>
-            <option value="yes">Yes (torsionally irregular)</option>
+            <option value="no">No, at every story</option>
+            <option value="yes">Yes, at every story</option>
+            <option value="some">Yes, at some stories</option>
+          </select>
+        </Field>
+        {form.torsion_strength === "some" && (
+          <Field label="Stories where it applies" hint="Story names as in ETABS, separated by commas. No at the others.">
+            <input
+              className="field"
+              placeholder="Story1, Story2"
+              value={form.torsion_strength_stories}
+              onChange={(e) => onForm({ torsion_strength_stories: e.target.value })}
+            />
+          </Field>
+        )}
+        <Field label="Analysis procedure" hint="Printed in the report. Confirm it is permitted per Table 12.6-1.">
+          <select
+            className="field"
+            value={form.analysis_procedure}
+            onChange={(e) => onForm({ analysis_procedure: e.target.value })}
+          >
+            <option value="">Not stated</option>
+            <option value="equivalent_lateral_force">Equivalent lateral force (12.8)</option>
+            <option value="modal_response_spectrum">Modal response spectrum (12.9.1)</option>
+            <option value="linear_response_history">Linear response history (12.9.2)</option>
           </select>
         </Field>
       </section>

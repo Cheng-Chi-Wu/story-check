@@ -8,6 +8,7 @@ GET  /api/health
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -16,7 +17,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from backend.code_checker import check_building
+from backend.code_checker import check_building, validate_project_info
 from backend.parser import parse_etabs, read_tables
 from backend.report_builder import build_report
 
@@ -55,17 +56,21 @@ async def analyze(
         info = json.loads(project_info)
         if not isinstance(info, dict):
             raise ValueError("project_info must be a JSON object")
+        validate_project_info(info)
 
         if len(files) > MAX_FILES:
             raise ValueError(f"at most {MAX_FILES} files can be uploaded at once")
-        tables = []
+        tables, inputs = [], []
         for f in files:
             content = await f.read()
             if len(content) > MAX_UPLOAD_BYTES:
                 raise ValueError(f"{f.filename}: file is larger than 20 MB")
             tables.extend(read_tables(content, f.filename))
+            # Printed in the report so a plan checker can tie the package to the exact input files.
+            inputs.append({"name": f.filename, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
 
         building = parse_etabs(tables, info, length_unit, force_unit, case_x or None, case_y or None)
+        building["project_info"]["input_files"] = inputs
         result = check_building(building)
     except json.JSONDecodeError as e:
         raise HTTPException(422, f"project_info is not valid JSON: {e}") from None
@@ -82,6 +87,8 @@ def export_report(result: dict):
         content = build_report(result)
     except (KeyError, TypeError) as e:
         raise HTTPException(422, f"body is not a valid CodeCheckResult: {e}") from None
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from None
 
     name = re.sub(r"[^A-Za-z0-9]+", "_", result["summary"].get("building_name") or "building").strip("_")
     return Response(

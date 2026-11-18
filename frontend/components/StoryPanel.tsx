@@ -49,9 +49,18 @@ export function Summary({ result }: { result: CodeCheckResult }) {
 export function Notices({ result }: { result: CodeCheckResult }) {
   const warnings = (result.project_info?.input_warnings as string[] | undefined) ?? [];
   const actions = result.summary.action_items ?? [];
-  if (!warnings.length && !actions.length) return null;
+  const unevaluated = result.summary.total_not_evaluated ?? 0;
+  if (!warnings.length && !actions.length && !unevaluated) return null;
   return (
     <div className="flex flex-col gap-2 border-b border-line bg-sheet p-3">
+      {unevaluated > 0 && (
+        <p className="border-l-2 border-steel bg-paper px-2.5 py-2 text-xs">
+          <span className="font-semibold">
+            {unevaluated} {unevaluated === 1 ? "check" : "checks"} not evaluated.
+          </span>{" "}
+          The data could not support them (look for N/A), so the overall result covers only the checks that ran.
+        </p>
+      )}
       {warnings.length > 0 && (
         <div className="border-l-2 border-warn bg-warn/10 px-2.5 py-2 text-xs">
           <p className="font-semibold">Check the input data</p>

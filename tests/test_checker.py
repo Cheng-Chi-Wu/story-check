@@ -74,9 +74,10 @@ def test_torsion_actions_depend_on_sdc_and_tir():
     assert "12.8.4.3" in actions("C", 1.3)
     assert "12.8.4.3" not in actions("B", 1.3)
     assert "12.8.4.2" in actions("B", 1.5)
-    assert "12.3.3.4" in actions("D", 1.3) and "rho = 1.3" not in actions("D", 1.3)
+    assert "12.3.3.5" in actions("D", 1.3) and "12.3.3.4" not in actions("D", 1.3)
+    assert "rho = 1.3" not in actions("D", 1.3)
     assert "rho = 1.3" in actions("D", 1.5)
-    assert "12.5" in actions("E", 1.3)
+    assert "12.5" in actions("C", 1.3) and "12.5" in actions("E", 1.3) and "12.5" not in actions("B", 1.5)
 
 
 def test_strength_criterion_input():
@@ -111,6 +112,43 @@ def test_flexible_diaphragm_marks_torsion_not_applicable():
 def test_zero_drift_story_is_not_applicable_not_pass():
     res = check_building(building([story(1, max_x=0.0, avg_x=0.0)], drift_is_amplified=True))
     assert get(res, "Story 1", TORSION_X)["status"] == "N/A"
+    assert get(res, "Story 1", "Allowable Story Drift (X-Dir)")["status"] == "N/A"
+    assert res["summary"]["total_not_evaluated"] == 2
+
+
+def test_strength_irregular_survives_zero_drift():
+    b = building([story(1, max_x=0.0, avg_x=0.0)], drift_is_amplified=True, torsion_strength_irregular=True)
+    c = get(check_building(b), "Story 1", TORSION_X)
+    assert c["status"] == "WARNING" and c["demand_value"] is None and c["actions"]
+
+
+def test_strength_irregular_as_story_list():
+    b = building([story(1, max_x=1.1, avg_x=1.0), story(2, max_x=1.1, avg_x=1.0)], drift_is_amplified=True,
+                 torsion_strength_irregular=["Story 2"])
+    res = check_building(b)
+    assert get(res, "Story 2", TORSION_X)["status"] == "WARNING"
+    c = get(res, "Story 1", TORSION_X)
+    assert c["status"] == "PASS" and "evaluated by the engineer: not met" in c["formula_breakdown"]
+    with pytest.raises(ValueError, match="unknown stories"):
+        check_building({**b, "project_info": {**b["project_info"], "torsion_strength_irregular": ["Story 9"]}})
+
+
+@pytest.mark.parametrize("key", ["torsion_strength_irregular", "drift_is_amplified", "apply_soft_story_exception"])
+def test_boolean_inputs_reject_strings(key):
+    b = building([story(1)], drift_is_amplified=True)
+    b["project_info"][key] = "false"
+    with pytest.raises(ValueError, match="true, false or null"):
+        check_building(b)
+
+
+def test_project_info_validation():
+    from backend.code_checker import validate_project_info
+
+    validate_project_info({"risk_category": "II", "report_date": "2026-11-17"})
+    with pytest.raises(ValueError, match="unknown project_info field"):
+        validate_project_info({"risk_category": "II", "moment_frame_roh": 1.3})
+    with pytest.raises(ValueError, match="ISO date"):
+        validate_project_info({"report_date": "November 17, 2026"})
 
 
 def test_zero_average_with_nonzero_max_is_rejected():
@@ -435,10 +473,18 @@ def test_basis_records_resolved_defaults():
     assert basis["torsion_strength_irregular"] is None
 
 
-def test_exception_uses_single_case_drifts_when_given():
+def test_exception_uses_per_case_profiles_when_given():
     b = soft_building([0.40, 0.30, 0.30, 0.30])  # envelope drifts would fail Exception 1 (1.33)
     for st, d in zip(b["stories"], [0.36, 0.30, 0.30, 0.30]):  # one consistent case: 1.20
-        st["exc_drift_x_in"] = d
-        st["exc_drift_x_case"] = "EQX"
+        st["exc_drifts_x"] = {"EQX": d}
     c = get(check_building(b), "Story 1", SOFT_X)
-    assert c["status"] == "PASS" and "output case EQX" in c["formula_breakdown"]
+    assert c["status"] == "PASS" and "EQX" in c["formula_breakdown"]
+
+
+def test_exception_must_hold_for_every_case():
+    # Codex N4: case A is uniform (exempt); case B has a 9x jump at the bottom and must govern.
+    b = soft_building([0.40, 0.30, 0.30, 0.30])
+    for st, a, bb in zip(b["stories"], [1.0, 1.0, 1.0, 1.0], [0.9, 0.1, 0.1, 0.1]):
+        st["exc_drifts_x"] = {"A": a, "B": bb}
+    c = get(check_building(b), "Story 1", SOFT_X)
+    assert c["status"] != "PASS" and "not met" in c["formula_breakdown"] and ": B" in c["formula_breakdown"]

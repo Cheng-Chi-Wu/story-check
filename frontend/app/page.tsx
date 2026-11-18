@@ -19,6 +19,8 @@ const DEFAULTS: ProjectForm = {
   structure_type: "other",
   diaphragm: "rigid",
   torsion_strength: "unknown",
+  torsion_strength_stories: "",
+  analysis_procedure: "",
   cd: "5.5",
   ie: "",
   drift_is_amplified: false,

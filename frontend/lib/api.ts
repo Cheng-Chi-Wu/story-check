@@ -24,6 +24,14 @@ async function send(path: string, init: RequestInit): Promise<Response> {
   return resp;
 }
 
+function strengthInput(form: ProjectForm): boolean | string[] | undefined {
+  if (form.torsion_strength === "unknown") return undefined;
+  if (form.torsion_strength === "some") {
+    return form.torsion_strength_stories.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return form.torsion_strength === "yes";
+}
+
 export function toProjectInfo(form: ProjectForm): Record<string, unknown> {
   const num = (s: string) => (s.trim() === "" ? undefined : Number(s));
   const info: Record<string, unknown> = {
@@ -36,8 +44,8 @@ export function toProjectInfo(form: ProjectForm): Record<string, unknown> {
     cd: num(form.cd),
     ie: num(form.ie),
     moment_frame_rho: num(form.moment_frame_rho),
-    torsion_strength_irregular:
-      form.torsion_strength === "unknown" ? undefined : form.torsion_strength === "yes",
+    analysis_procedure: form.analysis_procedure || undefined,
+    torsion_strength_irregular: strengthInput(form),
   };
   // Title-block details for the report; left out when blank.
   for (const k of ["project_number", "company", "engineer", "checked_by"] as const) {

@@ -30,6 +30,7 @@ TITLE_BLOCK = [
 BASIS_LABELS = [
     ("risk_category", "Risk Category"),
     ("seismic_design_category", "Seismic Design Category"),
+    ("analysis_procedure", "Analysis Procedure"),
     ("structure_type", "Structure Type (Table 12.12-1)"),
     ("diaphragm", "Diaphragm"),
     ("drift_is_amplified", "Input Drifts Already Amplified"),
@@ -43,10 +44,10 @@ BASIS_LABELS = [
 ]
 
 CASE_LABELS = [
-    ("drift_output_cases", "Output case(s), story drift (largest drift per story)"),
-    ("torsion_output_cases", "Output case(s), torsion (largest TIR per story)"),
+    ("drift_output_cases", "Output case(s), story drift (largest max and largest avg drift per story)"),
+    ("torsion_output_cases", "Output case(s), torsion (largest TIR per story over cases and steps)"),
     ("stiffness_output_case", "Output case, soft story stiffness (one case per direction)"),
-    ("exception_output_case", "Output case, 12.3.2.2 Exception 1 drifts (one case per direction)"),
+    ("exception_output_cases", "Output cases, 12.3.2.2 Exception 1 (each must meet it; worst reported)"),
 ]
 
 DISCLAIMER = (
@@ -81,9 +82,19 @@ def _status_run(paragraph, status: str):
     return run
 
 
+def _row_flag(row, tag: str):
+    """Set a row property: tblHeader repeats the row on each page, cantSplit keeps a row on one page."""
+    tr_pr = row._tr.get_or_add_trPr()
+    el = OxmlElement(tag)
+    el.set(qn("w:val"), "true")
+    tr_pr.append(el)
+
+
 def _table(doc, headers, widths=None):
     table = doc.add_table(rows=1, cols=len(headers))
     table.style = "Light Grid Accent 1"
+    _row_flag(table.rows[0], "w:tblHeader")
+    _row_flag(table.rows[0], "w:cantSplit")
     for cell, text in zip(table.rows[0].cells, headers):
         cell.text = ""
         run = cell.paragraphs[0].add_run(text)
@@ -92,7 +103,9 @@ def _table(doc, headers, widths=None):
 
 
 def _row(table, values, status_col=None):
-    cells = table.add_row().cells
+    row = table.add_row()
+    _row_flag(row, "w:cantSplit")
+    cells = row.cells
     for i, value in enumerate(values):
         cells[i].text = ""
         if i == status_col:
@@ -145,6 +158,8 @@ def _show(value) -> str:
         return STRUCTURE_TYPES[value]
     if isinstance(value, bool):
         return "Yes" if value else "No"
+    if isinstance(value, list):
+        return "Yes at " + ", ".join(map(str, value)) + "; no at the other stories" if value else "No"
     return str(value).replace("_", " ") if isinstance(value, str) else str(value)
 
 
@@ -181,7 +196,7 @@ def _report_date(info: dict) -> str:
         try:
             return date.fromisoformat(str(raw)).strftime("%B %d, %Y")
         except ValueError:
-            pass
+            raise ValueError(f"report_date must be an ISO date such as 2026-11-17, got {raw!r}") from None
     return date.today().strftime("%B %d, %Y")
 
 
@@ -241,12 +256,16 @@ def build_report(result: dict, project_info: dict | None = None) -> bytes:
         _row(t, ["Irregularities flagged (WARNING)", summary["total_warnings"]])
     if summary.get("total_not_applicable"):
         _row(t, ["Checks not applicable or not computable (N/A)", summary["total_not_applicable"]])
+    if summary.get("total_not_evaluated"):
+        _row(t, ["Checks not evaluated for lack of data (overall result excludes them)", summary["total_not_evaluated"]])
     _row(t, ["Maximum story drift D/C ratio", _fmt(summary["max_dc_ratio"])])
     basis = result.get("basis") or {}
     for key, label in BASIS_LABELS:
         value = basis.get(key, project_info.get(key))
         if key == "torsion_strength_irregular" and value is None and basis:
             value = "Not evaluated"
+        if key == "analysis_procedure" and value is None and basis:
+            value = "Not stated"
         if value is not None:
             _row(t, [label, _show(value)])
     for key, label in CASE_LABELS:
@@ -254,6 +273,13 @@ def build_report(result: dict, project_info: dict | None = None) -> bytes:
             _row(t, [label, _cases(project_info[key])])
     units = project_info.get("units") or {}
     _row(t, ["Units", f"{units.get('length', 'in')}, {units.get('force', 'kips')}"])
+
+    files = project_info.get("input_files") or []
+    if files:
+        doc.add_heading("Input Files", level=2)
+        t = _table(doc, ["File", "Size (bytes)", "SHA-256"])
+        for f in files:
+            _row(t, [f.get("name", ""), f.get("bytes", ""), f.get("sha256", "")])
 
     warnings = project_info.get("input_warnings") or []
     if warnings:
@@ -332,6 +358,7 @@ def build_report(result: dict, project_info: dict | None = None) -> bytes:
     doc.add_heading("3. Detailed Calculations by Story", level=1)
     for s in reversed(stories):
         h = doc.add_heading(level=2)
+        h.paragraph_format.keep_with_next = True
         h.add_run(f"{s['story_name']}  (elev. {_fmt(s['elevation_in'])} in, h_sx = {_fmt(s['height_in'])} in)  ")
         _status_run(h, s["status"])
         t = _table(doc, ["Check", "Code Reference", "Output Case", "Calculation", "Ratio", "Status"])

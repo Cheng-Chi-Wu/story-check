@@ -40,6 +40,8 @@ export interface CodeCheckResult {
     total_violations: number;
     total_warnings?: number;
     total_not_applicable?: number;
+    /** N/A checks that lack data (not N/A by code); the overall status excludes them. */
+    total_not_evaluated?: number;
     /** Largest story drift D/C; irregularity ratios are not included. */
     max_dc_ratio: number;
     action_items?: ActionItem[];
@@ -57,7 +59,10 @@ export interface ProjectForm {
   structure_type: string;
   diaphragm: "rigid" | "semirigid" | "flexible";
   /** Section 12.3.2.1.1 strength criterion: more than 75% of lateral strength on one side of the CM. */
-  torsion_strength: "unknown" | "no" | "yes";
+  torsion_strength: "unknown" | "no" | "yes" | "some";
+  /** Comma-separated story names, used when torsion_strength is "some". */
+  torsion_strength_stories: string;
+  analysis_procedure: string;
   cd: string;
   ie: string;
   drift_is_amplified: boolean;
