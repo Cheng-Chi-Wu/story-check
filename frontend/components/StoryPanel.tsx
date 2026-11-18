@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { STATUS_COLOR, STATUS_LABEL, type CodeCheckResult, type Status, type StoryResult } from "@/lib/types";
 
 export function StatusTag({ status, large }: { status: Status; large?: boolean }) {
@@ -36,7 +36,45 @@ export function Summary({ result }: { result: CodeCheckResult }) {
       <Stat value={s.total_stories} label="Stories" />
       <Stat value={s.total_violations} label="Failed checks" tone={s.total_violations ? "FAIL" : undefined} />
       <Stat value={s.total_warnings ?? 0} label="Irregularities" tone={s.total_warnings ? "WARNING" : undefined} />
-      <Stat value={s.max_dc_ratio.toFixed(2)} label="Max D/C" />
+      <Stat
+        value={s.max_dc_ratio.toFixed(2)}
+        label="Max drift D/C"
+        tone={s.max_dc_ratio > 1 ? "FAIL" : undefined}
+      />
+    </div>
+  );
+}
+
+/** Input warnings and the follow-up requirements the checks triggered. */
+export function Notices({ result }: { result: CodeCheckResult }) {
+  const warnings = (result.project_info?.input_warnings as string[] | undefined) ?? [];
+  const actions = result.summary.action_items ?? [];
+  if (!warnings.length && !actions.length) return null;
+  return (
+    <div className="flex flex-col gap-2 border-b border-line bg-sheet p-3">
+      {warnings.length > 0 && (
+        <div className="border-l-2 border-warn bg-warn/10 px-2.5 py-2 text-xs">
+          <p className="font-semibold">Check the input data</p>
+          <ul className="mt-1 list-disc pl-4">
+            {warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {actions.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer font-semibold">Required follow-up ({actions.length})</summary>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {actions.map((a) => (
+              <li key={a.action} className="border-l-2 border-line pl-2">
+                {a.action}
+                <span className="block text-steel">{a.stories.join(", ")}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }
@@ -52,9 +90,18 @@ function Detail({ story }: { story: StoryResult }) {
               <StatusTag status={c.status} />
             </div>
             <div className="mt-0.5 text-xs text-steel">
-              {c.code_reference} — D/C {c.dc_ratio.toFixed(2)}
+              {c.code_reference}
+              {c.dc_ratio !== null && ` — ratio ${c.dc_ratio.toFixed(2)}`}
+              {c.output_case && ` — case ${c.output_case}`}
             </div>
             <p className="mt-1.5 font-mono text-xs leading-relaxed break-words">{c.formula_breakdown}</p>
+            {c.actions && c.actions.length > 0 && (
+              <ul className="mt-1.5 list-disc pl-4 text-xs">
+                {c.actions.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>
@@ -70,8 +117,11 @@ interface Props {
 
 /** Stories listed top-down like an elevation; the selected one opens its calculations. */
 export default function StoryPanel({ result, selected, onSelect }: Props) {
-  const stories = [...result.story_results].reverse();
-  const scale = Math.max(1, ...stories.map((s) => s.max_dc_ratio));
+  const all = [...result.story_results].reverse();
+  const flagged = all.filter((s) => s.status === "FAIL" || s.status === "WARNING");
+  const [issuesOnly, setIssuesOnly] = useState(false);
+  const stories = issuesOnly ? flagged : all;
+  const scale = Math.max(1, ...all.map((s) => s.max_dc_ratio));
   const open = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
@@ -79,10 +129,29 @@ export default function StoryPanel({ result, selected, onSelect }: Props) {
     const row = open.current;
     const scroller = row?.closest<HTMLElement>("[data-story-scroll]");
     if (!row || !scroller) return;
-    scroller.scrollTop += row.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    const bar = scroller.querySelector<HTMLElement>("[data-story-filter]")?.offsetHeight ?? 0;
+    scroller.scrollTop += row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - bar;
   }, [selected]);
 
   return (
+    <>
+    <div data-story-filter className="sticky top-0 z-10 flex items-center gap-1 border-b border-line bg-sheet px-3 py-1.5 text-xs">
+      {[
+        [false, `All stories (${all.length})`],
+        [true, `Issues only (${flagged.length})`],
+      ].map(([value, label]) => (
+        <button
+          key={String(value)}
+          type="button"
+          aria-pressed={issuesOnly === value}
+          onClick={() => setIssuesOnly(value as boolean)}
+          className={`px-2 py-1 ${issuesOnly === value ? "bg-ink text-white" : "text-steel hover:text-ink"}`}
+        >
+          {label as string}
+        </button>
+      ))}
+    </div>
+    {stories.length === 0 && <p className="px-3 py-4 text-sm text-steel">No failed or irregular stories.</p>}
     <ol className="divide-y divide-line">
       {stories.map((s) => {
         const isOpen = s.story_name === selected;
@@ -122,5 +191,6 @@ export default function StoryPanel({ result, selected, onSelect }: Props) {
         );
       })}
     </ol>
+    </>
   );
 }

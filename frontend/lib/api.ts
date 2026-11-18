@@ -36,6 +36,8 @@ export function toProjectInfo(form: ProjectForm): Record<string, unknown> {
     cd: num(form.cd),
     ie: num(form.ie),
     moment_frame_rho: num(form.moment_frame_rho),
+    torsion_strength_irregular:
+      form.torsion_strength === "unknown" ? undefined : form.torsion_strength === "yes",
   };
   // Title-block details for the report; left out when blank.
   for (const k of ["project_number", "company", "engineer", "checked_by"] as const) {
@@ -55,11 +57,19 @@ export async function analyze(files: File[], form: ProjectForm): Promise<CodeChe
   return resp.json();
 }
 
+/** Today in the user's own time zone, as YYYY-MM-DD (the server runs on UTC). */
+function localDate(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export async function exportReport(result: CodeCheckResult): Promise<void> {
+  const body = { ...result, project_info: { ...result.project_info, report_date: localDate() } };
   const resp = await send("/api/export-report", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(result),
+    body: JSON.stringify(body),
   });
   const name = /filename="([^"]+)"/.exec(resp.headers.get("Content-Disposition") ?? "")?.[1] ?? "story_check.docx";
   const url = URL.createObjectURL(await resp.blob());
@@ -77,6 +87,18 @@ export const SAMPLES = [
 ];
 
 const SAMPLE_TABLES = ["story_definitions", "story_max_over_avg_drifts", "story_stiffness"];
+
+/** Start the analysis server early; the free host sleeps when idle and takes up to a minute to wake. */
+export function wakeServer(): void {
+  fetch(`${API}/api/health`).catch(() => {});
+}
+
+/** The stored result for a sample building, so the first visit needs no server round trip. */
+export async function loadSampleResult(folder: string): Promise<CodeCheckResult> {
+  const resp = await fetch(`/samples/${folder}/result.json`);
+  if (!resp.ok) throw new Error("The sample result is missing.");
+  return resp.json();
+}
 
 export async function loadSample(folder: string): Promise<{ files: File[]; info: Record<string, unknown> }> {
   const base = `/samples/${folder}`;

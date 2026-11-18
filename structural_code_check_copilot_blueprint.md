@@ -22,11 +22,12 @@
 
 MVP 第一階段聚焦於**美國結構設計規範 ASCE 7-22 Chapter 12（建築物耐震設計與結構不規則性檢核）**，具體包含三大核心檢核項目：
 
-1. **水平扭轉不規則檢核（Horizontal Torsional Irregularity - Table 12.3-1）**
-   * 計算各樓層「結構兩端」之最大層間變位與兩端平均層間變位之比值（$\Delta_{\max} / \Delta_{\text{avg}}$），分析須含偶發扭矩且 $A_x = 1.0$。僅適用於剛性或半剛性樓板。
-   * Type 1a（扭轉不規則）：比值 $> 1.2$。Type 1b（極端扭轉不規則）：比值 $> 1.4$。
-   * 後果：SDC C–F 只要是 Type 1a **或** 1b，都須依 §12.8.4.3 放大偶發扭矩 $A_x = (\delta_{\max} / 1.2\,\delta_{\text{avg}})^2$，$1 \le A_x \le 3$。Type 1b 在 **SDC E、F 禁止**（§12.3.3.1）。
-   * 狀態燈號：規則 = `PASS`；不規則但允許 = `WARNING`；規範禁止 = `FAIL`。
+1. **水平扭轉不規則檢核（Horizontal Torsional Irregularity - Table 12.3-1 Type 1，§12.3.2.1.1）**
+   * ASCE 7-22 只有一種扭轉不規則（7-16 的極端扭轉 Type 1b 已刪除；依 Trimble/Tekla 7-22 更新說明，未對照正式文本）。
+   * TIR（Torsional Irregularity Ratio）= 各樓層「結構兩端」最大層間變位 / 兩端平均層間變位，逐層、逐方向、逐工況計算，分析須含偶發扭矩且 $A_x = 1.0$。僅適用於剛性或半剛性樓板。
+   * 不規則條件：TIR $> 1.2$，**或**樓板下方超過 75% 的側向強度位於質心一側（工程師輸入）。
+   * 後果（列為 `actions`）：SDC C–F 依 §12.8.4.3 放大偶發扭矩 $A_x$；SDC D–F 樓板連接與集力構件設計力加大 25%（§12.3.3.4）、確認 Table 12.6-1 分析方法；TIR $> 1.4$ 時 SDC D–F 取 $\rho = 1.3$（§12.3.4.2）；SDC E–F 正交方向組合（§12.5）。扭轉不規則**不會**判為禁止。
+   * 狀態燈號：規則 = `PASS`；不規則但允許 = `WARNING`；規範禁止 = `FAIL`；不適用或無法計算 = `N/A`。
 2. **垂直軟弱層檢核（Vertical Soft Story Irregularity - Table 12.3-2）**
    * 比較各樓層側向勁度 $K_i$ 與上方樓層。
    * Type 1a（軟弱層）：$K_i < 0.70\,K_{i+1}$ **或** $K_i < 0.80 \times$ 上方三層平均勁度。
@@ -126,69 +127,18 @@ MVP 第一階段聚焦於**美國結構設計規範 ASCE 7-22 Chapter 12（建�
 * `diaphragm`（`"rigid"`）：`"rigid"` / `"semirigid"` / `"flexible"`；`flexible` 時不做扭轉檢核。
 * `drift_is_amplified`（`false`）：`false` 表示 `stories` 內的變位是彈性值，Checker 會乘上 `cd / ie`，此時 `cd` 必填。
 * `ie`：未提供時依風險類別取 1.0 / 1.0 / 1.25 / 1.5（Table 1.5-2）。
-* `moment_frame_rho`（`null`）：SDC D–F 抗彎矩構架填入 $\rho$，容許變位角會除以它。
+* `moment_frame_rho`（`null`）：SDC D–F 純抗彎矩構架填入 $\rho$（只接受 1.0 或 1.3），容許變位角會除以它。
+* `torsion_strength_irregular`（`null`）：§12.3.2.1.1 強度條件；`true` 直接判扭轉不規則，`null` 表示未評估。
+* `structure_type` 選 `four_story_or_less_drift_tolerant` 時，超過 4 層會被拒絕。
 * `drift_limit_ratio`（`null`）：填入數值時覆寫 Table 12.12-1 查表結果。
 * `stories` 內 `max_drift_*` = 樓層兩端之最大層間變位，`avg_drift_*` = 兩端平均層間變位（含偶發扭矩、$A_x = 1.0$）。
 
 ### 5.2 Code Checker 輸出 / Frontend & Report 接收格式 (`CodeCheckResult`)
-以下為引擎對「Story 1 上方為 Story 2（$K_x = 880$）」兩層範例的實際輸出（僅列 Story 1 的 X 向三項檢核）。`summary` 另含 `total_warnings`。SDC D 下極端不規則為允許但需額外處理，故為 `WARNING`；SDC E/F 才是 `FAIL`。
+完整範例見 `data/sample_output/15_story_tower_result.json`（引擎實際輸出），欄位說明見 `PROJECT_REVIEW.md` 6.3 節。重點：
 
-```json
-{
-  "summary": {
-    "building_name": "Los Angeles Commercial Tower",
-    "total_stories": 2,
-    "overall_status": "WARNING",
-    "total_violations": 0,
-    "total_warnings": 2,
-    "max_dc_ratio": 1.369
-  },
-  "story_results": [
-    {
-      "story_name": "Story 1",
-      "elevation_in": 180.0,
-      "height_in": 180.0,
-      "status": "WARNING",
-      "max_dc_ratio": 1.369,
-      "deformations": {
-        "max_drift_x_in": 0.4,
-        "avg_drift_x_in": 0.27,
-        "max_drift_y_in": 0.33,
-        "avg_drift_y_in": 0.3
-      },
-      "checks": [
-        {
-          "check_type": "Torsional Irregularity (X-Dir)",
-          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1b",
-          "demand_value": 1.4815,
-          "capacity_limit": 1.2,
-          "dc_ratio": 1.235,
-          "status": "WARNING",
-          "formula_breakdown": "Delta_max / Delta_avg = 0.400 in / 0.270 in = 1.481 > 1.40 (Extreme Torsional Irregularity; amplify accidental torsion by A_x per 12.8.4.3)"
-        },
-        {
-          "check_type": "Soft Story Irregularity (X-Dir)",
-          "code_reference": "ASCE 7-22 Table 12.3-2, Type 1b",
-          "demand_value": 450.0,
-          "capacity_limit": 616.0,
-          "dc_ratio": 1.369,
-          "status": "WARNING",
-          "formula_breakdown": "K_i / K_(i+1) = 450.0 / 880.0 = 0.511 (limit 0.70) -> below 0.60 / 0.70 (Extreme Soft Story)"
-        },
-        {
-          "check_type": "Allowable Story Drift (X-Dir)",
-          "code_reference": "ASCE 7-22 Table 12.12-1",
-          "demand_value": 0.01222,
-          "capacity_limit": 0.02,
-          "dc_ratio": 0.611,
-          "status": "PASS",
-          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.400 in / 1 = 2.200 in [edge (max), torsionally irregular per 12.8.6]; Delta / h_sx = 2.200 in / 180.0 in = 0.0122 <= 0.0200 (Table 12.12-1, Risk Category II)"
-        }
-      ]
-    }
-  ]
-}
-```
+* `summary`：`overall_status`、`total_violations`（FAIL 數）、`total_warnings`、`total_not_applicable`、`max_dc_ratio`（**只取變位檢核**的 D/C）、`action_items`（`{action, stories}` 清單）。
+* `basis`：實際採用的參數（含預設值，例如由風險類別推得的 I_e）。
+* 每項檢核：`check_type`、`code_reference`、`demand_value`、`capacity_limit`、`dc_ratio`、`status`（PASS / WARNING / FAIL / N/A）、`formula_breakdown`、`output_case`、`actions`。N/A 檢核的數值欄位可能為 null。
 
 ---
 

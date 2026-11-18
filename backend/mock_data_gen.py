@@ -135,6 +135,31 @@ def write_all(root: str | Path = "data") -> list[Path]:
     return folders
 
 
+def sample_result(folder: str | Path) -> dict:
+    """The /api/analyze response for a sample folder, as the frontend shows it on first visit."""
+    from backend.code_checker import check_building
+    from backend.parser import parse_etabs
+
+    folder = Path(folder)
+    info = json.loads((folder / "project.json").read_text())
+    building = parse_etabs(sorted(folder.glob("*.csv")), info)
+    result = check_building(building)
+    result["project_info"] = building["project_info"]
+    return result
+
+
+def write_frontend_samples(src: str | Path = "data", dest: str | Path = "frontend/public/samples") -> None:
+    """Copy the sample tables to the frontend and store each precomputed result next to them."""
+    for spec in BUILDINGS:
+        source, target = Path(src) / spec["folder"], Path(dest) / spec["folder"]
+        target.mkdir(parents=True, exist_ok=True)
+        for f in [*source.glob("*.csv"), source / "project.json"]:
+            (target / f.name).write_bytes(f.read_bytes())
+        (target / "result.json").write_text(json.dumps(sample_result(source), indent=2) + "\n")
+
+
 if __name__ == "__main__":
     for path in write_all():
         print(f"wrote {path}")
+    write_frontend_samples()
+    print("wrote frontend/public/samples (tables and precomputed results)")

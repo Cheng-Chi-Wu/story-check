@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from backend.code_checker import check_building
-from backend.parser import parse_etabs, read_table
+from backend.parser import parse_etabs, read_tables
 from backend.report_builder import build_report
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -63,7 +63,7 @@ async def analyze(
             content = await f.read()
             if len(content) > MAX_UPLOAD_BYTES:
                 raise ValueError(f"{f.filename}: file is larger than 20 MB")
-            tables.append(read_table(content, f.filename))
+            tables.extend(read_tables(content, f.filename))
 
         building = parse_etabs(tables, info, length_unit, force_unit, case_x or None, case_y or None)
         result = check_building(building)

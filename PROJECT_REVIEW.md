@@ -29,6 +29,7 @@
 | Word 計算書 | 完成，**未在 Microsoft Word 中檢視過完整版面** |
 | 前端（含 3D） | 完成，已在瀏覽器手動測試 |
 | 測試 | 後端共 74 個案例全數通過；前端沒有自動化測試 |
+| 審查意見 | 2026-11-17 收到 Codex、Muse、Gemini 三份審查，已依意見修正扭轉規則、工況選取、輸入防呆與計算書（見第 12 節） |
 | 部署 | 已上線（前端 Vercel、後端 Render 免費方案），線上已實測範例分析與報告匯出 |
 | 使用者驗證 | **零**。沒有任何結構工程師看過或用過 |
 | 規範條文核對 | **未做**。所有限值與條文編號由 AI 依記憶寫成，未對照 ASCE 7-22 正式文本 |
@@ -84,19 +85,27 @@ render.yaml                     後端部署設定
 | `PASS` | 規則，或在限值內 |
 | `WARNING` | 不規則性存在，規範**允許**但會觸發額外要求 |
 | `FAIL` | 規範**禁止**（§12.3.3.1），或變位超過容許值 |
+| `N/A` | 不適用或資料無法計算（例如柔性樓板的扭轉、勁度 ≤ 0）；原因寫在 `formula_breakdown`，不會被當成通過 |
 
-樓層狀態取該層六項中最嚴重者；建築狀態取所有樓層中最嚴重者。
+樓層狀態取該層六項中最嚴重者（`N/A` 最輕）；建築狀態取所有樓層中最嚴重者。
 
-### 5.2 水平扭轉不規則（Table 12.3-1，Type 1a / 1b）
+`WARNING` 與 `FAIL` 的檢核帶有 `actions` 清單，列出因此觸發的設計要求；全棟彙整成 `summary.action_items`（每項附觸發樓層），計算書中印成「Code-Triggered Action Items」表，供 EOR 逐項簽核。這些後續要求的條文編號同樣**未對照正式文本**。
 
-- 比值 = `max_drift / avg_drift`。`max_drift` 是樓層兩端中較大的層間變位，`avg_drift` 是兩端平均。
+### 5.2 水平扭轉不規則（Table 12.3-1，Type 1；§12.3.2.1.1 TIR）
+
+2026-11-17 依審查意見改寫。ASCE 7-22 只剩一種扭轉不規則（Type 1），7-16 的「極端扭轉 Type 1b」已刪除（依 Trimble/Tekla 的 7-22 更新說明，未對照正式文本）。
+
+- TIR = `max_drift / avg_drift`。有多個工況時，每層每方向取**所有工況中最大的 TIR**（不是取最大變位那個工況的比值）。
 - 假設輸入的分析已含偶發扭矩且 A_x = 1.0。**工具無法驗證這點**。
-- 比值 ≤ 1.2：`PASS`
-- 1.2 < 比值 ≤ 1.4：Type 1a，`WARNING`
-- 比值 > 1.4：Type 1b。SDC E、F 為 `FAIL`（§12.3.3.1 禁止），其他 SDC 為 `WARNING`
-- SDC C–F 且不規則時，說明文字會提示需依 §12.8.4.3 放大偶發扭矩 A_x。**A_x 的數值沒有計算**（需要各層位移，目前只有層間變位）。
-- 樓板為 `flexible` 時整項跳過。
-- `dc_ratio` = 比值 / 1.2。
+- 不規則的條件：TIR > 1.2，**或**使用者表示「樓板下方超過 75% 的側向強度位在質心一側」（`torsion_strength_irregular: true`）。強度條件 ETABS 表格沒有資料，使用者未填時 `PASS` 的說明會註明「強度條件未評估」。
+- 不規則 → `WARNING`，在任何 SDC 都**不再**判 `FAIL`。觸發的後續要求（`actions`）：
+  - SDC C–F：依 §12.8.4.3 放大偶發扭矩 A_x，並確認匯出的變位已含放大
+  - SDC B 且 TIR > 1.4：依 §12.8.4.2 計入偶發扭矩
+  - SDC D–F：§12.3.3.4 樓板連接與集力構件設計力加大 25%；確認 Table 12.6-1 允許所用分析方法；TIR > 1.4 時 ρ = 1.3（§12.3.4.2）
+  - SDC E–F：§12.5 正交方向組合
+- **A_x 的數值沒有計算**（需要各層位移，目前只有層間變位）。
+- 樓板為 `flexible` 時為 `N/A`。
+- `dc_ratio` = TIR / 1.2。
 
 ### 5.3 垂直軟弱層（Table 12.3-2，Type 1a / 1b）
 
@@ -105,12 +114,14 @@ render.yaml                     後端部署設定
 - Type 1a：r1 < 0.70 **或** r3 < 0.80 → `WARNING`
 - Type 1b：r1 < 0.60 **或** r3 < 0.70 → SDC E、F 為 `FAIL`，其他為 `WARNING`
 - 頂層沒有上方樓層，不產生此項檢核。上方不足三層時只用 r1。
+- 勁度**整棟每個方向只用一個工況**（該方向樓層剪力最大的工況），避免相鄰樓層用不同載重比較。
+- 本層或上方任一層勁度 ≤ 0（高樓高振態下樓層剪力反向時常見）→ `N/A`，建議改用單位載重勁度或例外 1 的變位比方法。
 - `capacity_limit` = 避免 Type 1a 所需的最小勁度 = max(0.70·K_(i+1), 0.80·K_avg3)；`dc_ratio` = 該值 / K_i。
 
 **§12.3.2.2 例外條款**（預設啟用，可用 `apply_soft_story_exception: false` 關閉）：
 
 - 例外 1：某方向所有受檢樓層的變位角（平均變位 / 樓高）都不大於上一層的 130% 時，該方向的 Type 1a/1b 不適用。
-  - 不計扭轉，所以用平均變位。
+  - 條文允許不計扭轉，所以用平均變位；且整棟每個方向只用**一個工況**（平均變位總和最大者），計算書會列出。
   - 「最頂兩層的關係不需評估」被實作成：只跳過「次頂層 對 頂層」這一組比較。
   - 至少要三層才會套用。
 - 例外 2：單層建築；以及 SDC B、C、D 的兩層建築。
@@ -132,7 +143,8 @@ render.yaml                     後端部署設定
   | 其他砌體剪力牆 | 0.007 | 0.007 | 0.007 |
   | 其他所有結構 | 0.020 | 0.015 | 0.010 |
 
-- 填了 `moment_frame_rho` 且 SDC 為 D–F 時，容許值除以 ρ（§12.12.1.1）。**工具不判斷結構是否真的是抗彎矩構架**，完全信任使用者輸入。
+- 填了 `moment_frame_rho` 且 SDC 為 D–F 時，容許值除以 ρ（§12.12.1.1）。ρ 只接受 1.0 或 1.3，其他值回 422。**工具不判斷結構是否真的是純抗彎矩構架**（雙重系統不適用），由使用者負責。
+- 選「4 層以下」限值但建築超過 4 層時回 422。
 - 超過容許值為 `FAIL`，否則 `PASS`。沒有「接近限值」的警告。
 - 未計入樓板變形項 δ_di。
 
@@ -144,7 +156,7 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 
 ### 6.1 輸入：三張 ETABS 表
 
-以欄位名稱自動辨識（不看檔名），接受 CSV 與 Excel，會跳過標題列與單位列。
+以欄位名稱自動辨識（不看檔名），接受 CSV 與 Excel（一個活頁簿可以每張表放一個工作表），會跳過標題列與單位列。有 `Step Type` 欄時丟掉 `Min` 列；沒有 `Direction` 欄時從 `Item`（如 `Diaph D1 X`）取方向。
 
 | 表 | 必要欄位 | 備註 |
 | :--- | :--- | :--- |
@@ -152,7 +164,18 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 | Story Max Over Avg Drifts | `Story`、`Direction`、`Max Drift`、`Avg Drift` | 有 `Output Case` 時可指定工況 |
 | Story Stiffness | `Story`、`Stiff X`、`Stiff Y` | 有 `Shear X/Y` 時取該方向剪力最大的工況 |
 
-工況選擇：使用者未指定時，每層每方向各自取 `Max Drift` 最大的那一列。**不同樓層可能因此取到不同工況**；採用了哪些工況會寫進計算書。
+工況選擇（使用者未指定時）：
+
+| 用途 | 取法 |
+| :--- | :--- |
+| 變位檢核 | 每層每方向取 `Max Drift` 最大的工況（包絡） |
+| 扭轉 TIR | 每層每方向取 TIR 最大的工況 |
+| 軟弱層勁度 | 整棟每方向一個工況：該方向剪力最大者 |
+| 例外 1 變位比 | 整棟每方向一個工況：平均變位總和最大者 |
+
+每項檢核的 `output_case` 記錄所用工況，計算書逐項列出。
+
+輸入警告（`project_info.input_warnings`，網頁與計算書都會顯示）：負變位被取絕對值、換算後層高不在 6–40 ft、變位角異常大。
 
 **欄位名稱是依對 ETABS 表格的印象推定的，沒有對照過真實匯出檔。**
 
@@ -171,19 +194,24 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
   "moment_frame_rho": null,
   "drift_limit_ratio": null,
   "apply_soft_story_exception": true,
+  "torsion_strength_irregular": null,
   "project_number": "24-117",
   "company": "...", "engineer": "...", "checked_by": "..."
 }
 ```
 
-只有 `risk_category` 必填；`drift_is_amplified` 為 false 時 `cd` 也必填。完整說明見藍圖 5.1 節。
+只有 `risk_category` 必填；`drift_is_amplified` 為 false 時 `cd` 也必填。`moment_frame_rho` 只能是 1.0 或 1.3。`torsion_strength_irregular` 為 null 表示「強度條件未評估」。匯出計算書時前端另加 `report_date`（使用者當地日期）。完整說明見藍圖 5.1 節。
 
 ### 6.3 輸出 `CodeCheckResult`
 
 ```json
 {
   "summary": {"building_name": "...", "total_stories": 15, "overall_status": "FAIL",
-              "total_violations": 1, "total_warnings": 3, "max_dc_ratio": 1.472},
+              "total_violations": 1, "total_warnings": 3, "total_not_applicable": 0,
+              "max_dc_ratio": 1.014,
+              "action_items": [{"action": "Confirm the analysis procedure is permitted ... Table 12.6-1",
+                                "stories": ["Story1", "Story4"]}]},
+  "basis": {"risk_category": "II", "ie": 1.0, "diaphragm": "rigid", "drift_limit": 0.02, "...": "實際採用的參數（含預設值）"},
   "story_results": [{
     "story_name": "Story1", "elevation_in": 180.0, "height_in": 180.0,
     "status": "FAIL", "max_dc_ratio": 1.472,
@@ -193,7 +221,9 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
       "code_reference": "ASCE 7-22 Table 12.12-1",
       "demand_value": 0.02029, "capacity_limit": 0.02, "dc_ratio": 1.014,
       "status": "FAIL",
-      "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.664 in / 1 = 3.650 in [center of mass (avg)]; Delta / h_sx = 3.650 in / 180.0 in = 0.0203 > 0.0200 (Table 12.12-1, Risk Category II)"
+      "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.664 in / 1 = 3.650 in [center of mass, approximated by avg of ends]; ...",
+      "output_case": "EQX",
+      "actions": ["Stiffen the structure or revise the design until the story drift is within the limit"]
     }]
   }],
   "project_info": {"...": "API 回應才有，內含實際使用的參數與採用的工況"}
@@ -202,7 +232,7 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 
 完整範例：`data/sample_output/15_story_tower_result.json`。
 
-注意：`max_dc_ratio` 混合了三種不同性質的比值（扭轉比 / 1.2、勁度需求比、變位比）。不規則性的 D/C > 1 不代表違規。
+注意：`summary.max_dc_ratio` 只取**變位檢核**的 D/C（真正的需求/容量比）。每項檢核與每層的 `dc_ratio` 仍包含不規則性的「距門檻比值」，大於 1 不代表違規；計算書中標為「Ratio」並附說明。`N/A` 檢核的 `demand_value`、`dc_ratio` 可能是 null。
 
 ## 7. 使用步驟
 
@@ -235,7 +265,7 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 網址：https://story-check-virid.vercel.app
 
 1. 依 7.1 從 ETABS 匯出 3 張表。
-2. 打開網頁，把三個檔案拖進左上角的框（或點「載入範例大樓」直接看效果）。
+2. 打開網頁（首次開啟會直接顯示 15 層範例的結果，這份結果是預先算好存在前端的，不需要等後端喚醒；同時會在背景喚醒後端），把三個檔案拖進左上角的框（或點「載入範例大樓」直接看效果）。
 3. 填專案參數：風險類別、SDC、結構類型、樓板類型、Cd（若匯出的變位已放大則勾選該選項）、檔案使用的單位。
 4. 選填報告標題欄：專案編號、事務所、製作人、審核人。
 5. 按「Run check」。
@@ -306,15 +336,16 @@ curl -X POST localhost:8000/api/export-report \
 ## 10. 已知限制與風險
 
 1. **規範條文未經核對**：這是最大的風險。限值、條文編號、例外條款的解讀都可能有錯。
-2. **解析器未見過真實檔案**：欄位名稱、單位列格式、多工況的實際樣貌都是猜的。
-3. **質心變位用平均值近似**：兩端平均不等於質心變位，質心偏離幾何中心時會有誤差。
-4. **多工況取法粗糙**：逐層取最大值可能把不同工況混在一起；ETABS 的 Max/Min step type 也沒有特別處理。
-5. **扭轉檢核的前提無法驗證**：工具不知道使用者選的工況是否真的含偶發扭矩、A_x 是否為 1.0。
-6. **Story Stiffness 的定義**：ETABS 的樓層勁度是「樓層剪力 / 層間變位」，與載重型態有關。直接拿它做 Table 12.3-2 的判定是否被審圖單位接受，沒有確認過。
-7. **沒有登入與權限**：上線後任何人都能使用；沒有流量限制。
-8. **不保存資料**：重新整理頁面結果就消失。
-9. **前端沒有自動化測試**。
-10. **責任歸屬**：計算書上有免責聲明，但若工程師依賴錯誤結果送審，法律責任如何界定沒有研究過。
+2. **解析器未見過真實檔案**：欄位名稱、單位列格式、多工況的實際樣貌都是猜的。三份審查都把這列為最大風險之一。
+3. **質心變位用平均值近似**：兩端平均不等於質心變位，L 形、T 形或質量偏心的平面可能低估（Gemini 估 15–30%，未驗證）。需要 ETABS 的質心位移表才能改正。
+4. **變位與 TIR 仍採逐層包絡**：每層取最嚴重的工況，這對逐層檢核是常見做法；軟弱層勁度與例外 1 已改成整棟單一工況。
+5. **扭轉強度條件靠使用者輸入**：§12.3.2.1.1 的「75% 側向強度」條件沒有從資料計算。
+6. **扭轉檢核的前提無法驗證**：工具不知道使用者選的工況是否真的含偶發扭矩、A_x 是否為 1.0。
+7. **Story Stiffness 的定義**：ETABS 的樓層勁度是「樓層剪力 / 層間變位」，與載重型態有關。直接拿它做 Table 12.3-2 的判定是否被審圖單位接受，沒有確認過。
+8. **沒有登入與權限**：上線後任何人都能使用；沒有流量限制。
+9. **不保存資料**：重新整理頁面結果就消失。
+10. **前端沒有自動化測試**。
+11. **責任歸屬**：計算書上有免責聲明，但若工程師依賴錯誤結果送審，法律責任如何界定沒有研究過。
 
 ## 11. 請審查者回答的問題
 
@@ -336,3 +367,50 @@ curl -X POST localhost:8000/api/export-report \
 11. 誰會付錢？工程師個人、事務所，還是根本沒人？
 12. 計算書要長成什麼樣子，審圖單位才會收？
 13. 一個沒有 PE/SE 背書的工具產出的計算書，工程師敢用嗎？
+
+## 12. 2026-11-17 審查意見處理紀錄
+
+三份審查：Codex（`STORY_CHECK_REVIEW_2026-11-17.md`）、Muse（`Story_Check_審查報告_2026-11-17.md`）、Gemini（`gemini_story_check_full_review_ui_ux_guide.md`）。三份都確認算術正確，問題集中在規範版本與輸入防呆。
+
+**已修正**
+
+| 問題 | 提出者 | 處理 |
+| :--- | :--- | :--- |
+| 扭轉用 7-16 的 Type 1a/1b，SDC E/F 的 TIR > 1.4 誤判禁止 | Codex、Muse | 改為 7-22 單一 Type 1（TIR），不再判 FAIL；加入強度條件輸入與後續要求 |
+| 扭轉比沿用最大變位工況，漏掉最大 TIR | Codex、Muse | 每層取所有工況中最大 TIR |
+| 15 層建築可選 4 層以下限值 | Codex | 回 422 |
+| ρ 可填任意正值 | Codex、Muse | 只接受 1.0 / 1.3 |
+| 平均變位 = 0 時扭轉檢核消失 | Muse | 平均為 0、最大不為 0 回 422；兩者皆 0 為 N/A |
+| 勁度為 0 被誤報「缺資料」；高樓勁度可能為負 | Codex、Muse、Gemini | 勁度 ≤ 0 → N/A 並說明原因 |
+| 柔性樓板的扭轉檢核不留痕 | Codex、Muse | 改為 N/A 並寫明原因 |
+| 單欄標題列讓 CSV 解析崩潰 | Codex、Muse | 改用容錯的 CSV 讀取 |
+| ETABS Step Type Min 列、Item 欄方向 | Gemini | 丟 Min 列；從 Item 取方向 |
+| 同一 Excel 多張表只讀第一個工作表 | 自行發現 | 讀取所有工作表 |
+| 軟弱層勁度逐層混用工況 | 三份皆提 | 整棟每方向一個工況 |
+| 負變位、單位選錯無提示 | Codex、Muse | 輸入警告 |
+| 計算書缺 I_e、樓板型式（預設值未列出） | Muse | 印出實際採用的參數 |
+| 計算書日期用 UTC | Muse | 使用前端傳來的當地日期 |
+| PASS 列條文寫 Type 1a | Muse | PASS 列不標類型 |
+| WARNING 沒寫後續要求 | Muse、Gemini | 每項檢核附 `actions`，計算書加「Code-Triggered Action Items」簽核表 |
+| 每項檢核追溯不到工況 | Codex、Muse | 每項記錄 `output_case`，計算書逐項列出 |
+| `max_dc_ratio` 混合不同性質比值 | 三份皆提 | 摘要只取變位 D/C；其他比值改稱 Ratio |
+
+**未處理（需要資料或屬於下一階段）**
+
+- 用正版 ASCE 7-22 逐條核對（含 7-22 Table 12.3-1/12.3-2 的完整型別與編號、§12.3.3.4、Table 12.6-1 的實際適用條件）。
+- 真實 ETABS 匯出檔、質心位移資料、A_x 數值。
+- 弱層（Table 12.3-2 弱層，需樓層強度）、P-Δ 穩定係數 §12.8.7。
+- Gemini 的介面建議：深色 CAD 風格、變位剖面圖、報告預覽視窗、A_x 與建議偏心率（需要樓層位移資料）。
+- Gemini 的意見仍以 7-16 的 Type 1a/1b 描述扭轉，與 Trimble 的 7-22 說明不符，這部分未採納。
+
+**第二輪（Gemini 補充的使用者體驗建議）**
+
+| 建議 | 處理 |
+| :--- | :--- |
+| 單一方向資料不應報錯 | 只有 X 或只有 Y 時照常檢核，另一方向每層一筆 `N/A`（`X-Direction Checks` / `Y-Direction Checks`），並加輸入警告；`basis.directions_checked` 記錄檢核方向 |
+| 從 ETABS 直接複製貼上 | 網頁上傳區下方有貼上框，貼上的內容當成 `.txt` 檔送出；後端依 Tab 與逗號數量判斷分隔符號。**ETABS 實際複製出來的格式未驗證**（是否含標題列、單位列） |
+| 上傳區標示不保存資料 | 寫「Files are processed in memory to run the check and are not saved on our servers.」刻意不寫「100%」，因為託管商有一般存取紀錄 |
+| 首次開啟自動載入範例 | 讀取 `frontend/public/samples/15_story_tower/result.json`（預先算好），由 `python -m backend.mock_data_gen` 產生；測試 `test_frontend_precomputed_samples_match_the_engine` 會在引擎改動而沒重新產生時失敗 |
+| 樓層清單「只看有問題的」 | 右欄加「All stories / Issues only」切換，Issues 指 Fail 與 Irregular |
+
+Gemini 舉例的「偏心率 5% × 1.45 = 7.25%」算錯：TIR 1.5 時 A_x = (1.5/1.2)² ≈ 1.56，且 A_x 應以樓層位移計算，未採用。

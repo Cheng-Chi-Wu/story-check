@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SetupPanel from "@/components/SetupPanel";
-import StoryPanel, { StatusTag, Summary } from "@/components/StoryPanel";
-import { analyze, exportReport, loadSample } from "@/lib/api";
+import StoryPanel, { Notices, StatusTag, Summary } from "@/components/StoryPanel";
+import { analyze, exportReport, loadSample, loadSampleResult, wakeServer } from "@/lib/api";
 import type { CodeCheckResult, ProjectForm } from "@/lib/types";
 
 const BuildingViewer = dynamic(() => import("@/components/BuildingViewer"), {
@@ -18,6 +18,7 @@ const DEFAULTS: ProjectForm = {
   seismic_design_category: "D",
   structure_type: "other",
   diaphragm: "rigid",
+  torsion_strength: "unknown",
   cd: "5.5",
   ie: "",
   drift_is_amplified: false,
@@ -29,6 +30,13 @@ const DEFAULTS: ProjectForm = {
   engineer: "",
   checked_by: "",
 };
+
+function formFromInfo(info: Record<string, unknown>): ProjectForm {
+  return {
+    ...DEFAULTS,
+    ...Object.fromEntries(Object.entries(info).map(([k, v]) => [k, typeof v !== "number" ? v : Number.isInteger(v) ? v.toFixed(1) : String(v)])),
+  };
+}
 
 /** First story worth looking at: a failing one, else an irregular one. */
 function firstFlagged(result: CodeCheckResult): string | null {
@@ -44,6 +52,28 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // First visit: show the 15-story sample right away from its stored result, and wake the server meanwhile.
+  useEffect(() => {
+    wakeServer();
+    let cancelled = false;
+    (async () => {
+      try {
+        const folder = "15_story_tower";
+        const [{ files: f, info }, r] = await Promise.all([loadSample(folder), loadSampleResult(folder)]);
+        if (cancelled) return;
+        setFiles(f);
+        setForm(formFromInfo(info));
+        setResult(r);
+        setSelected(firstFlagged(r));
+      } catch {
+        /* the empty start screen is fine */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function run(runFiles: File[], runForm: ProjectForm) {
     setBusy(true);
@@ -64,10 +94,7 @@ export default function Home() {
     setError(null);
     try {
       const { files: f, info } = await loadSample(folder);
-      const next: ProjectForm = {
-        ...DEFAULTS,
-        ...Object.fromEntries(Object.entries(info).map(([k, v]) => [k, typeof v === "number" ? String(v) : v])),
-      };
+      const next = formFromInfo(info);
       setFiles(f);
       setForm(next);
       await run(f, next);
@@ -158,6 +185,7 @@ export default function Home() {
             <>
               <Summary result={result} />
               <div data-story-scroll className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                <Notices result={result} />
                 <StoryPanel result={result} selected={selected} onSelect={setSelected} />
               </div>
               <p className="border-t border-line px-3 py-2 text-xs text-steel">

@@ -27,6 +27,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSample, busy }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const [pasted, setPasted] = useState("");
 
   const add = (list: FileList | null) => {
     if (!list?.length) return;
@@ -61,11 +62,14 @@ export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSamp
         >
           Drop the three files here, or choose files
         </button>
+        <p className="mt-2 text-xs text-steel">
+          Files are processed in memory to run the check and are not saved on our servers.
+        </p>
         <input
           ref={input}
           type="file"
           multiple
-          accept=".csv,.xlsx,.xls"
+          accept=".csv,.txt,.tsv,.xlsx,.xls"
           className="sr-only"
           onChange={(e) => {
             add(e.target.files);
@@ -88,6 +92,27 @@ export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSamp
             ))}
           </ul>
         )}
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer text-xs font-medium text-steel">Or paste a table copied from ETABS</summary>
+          <textarea
+            className="field mt-2 h-24 font-mono text-xs"
+            placeholder="Select the table in ETABS, including the header row, press Ctrl+C and paste here"
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={!pasted.trim()}
+            onClick={() => {
+              const n = files.filter((f) => f.name.startsWith("pasted-table-")).length + 1;
+              onFiles([...files, new File([pasted], `pasted-table-${n}.txt`, { type: "text/plain" })]);
+              setPasted("");
+            }}
+            className="mt-1.5 border border-line bg-sheet px-2 py-1 text-xs hover:border-accent disabled:opacity-50"
+          >
+            Add pasted table
+          </button>
+        </details>
         <p className="mt-3 text-xs text-steel">No files handy? Load a sample building:</p>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {SAMPLES.map((s) => (
@@ -154,6 +179,20 @@ export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSamp
             <option value="flexible">Flexible (no torsion check)</option>
           </select>
         </Field>
+        <Field
+          label="Lateral strength > 75% on one side of CM"
+          hint="Section 12.3.2.1.1 strength criterion. Not in the ETABS tables, so state it here."
+        >
+          <select
+            className="field"
+            value={form.torsion_strength}
+            onChange={(e) => onForm({ torsion_strength: e.target.value as ProjectForm["torsion_strength"] })}
+          >
+            <option value="unknown">Not evaluated</option>
+            <option value="no">No</option>
+            <option value="yes">Yes (torsionally irregular)</option>
+          </select>
+        </Field>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -188,13 +227,19 @@ export default function SetupPanel({ form, onForm, files, onFiles, onRun, onSamp
             />
           </Field>
         </div>
-        <Field label="Redundancy factor ρ" hint="Moment frames in SDC D to F only. Leave blank otherwise.">
-          <input
+        <Field
+          label="Redundancy factor ρ (moment frames only)"
+          hint="For systems of moment frames only, in SDC D to F (12.12.1.1). Not for dual systems."
+        >
+          <select
             className="field"
-            inputMode="decimal"
             value={form.moment_frame_rho}
             onChange={(e) => onForm({ moment_frame_rho: e.target.value })}
-          />
+          >
+            <option value="">Not a moment-frame-only system</option>
+            <option value="1.0">1.0</option>
+            <option value="1.3">1.3</option>
+          </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Length unit in files">

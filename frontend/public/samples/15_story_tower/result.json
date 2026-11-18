@@ -1,0 +1,1295 @@
+{
+  "summary": {
+    "building_name": "Los Angeles 15-Story Commercial Tower",
+    "total_stories": 15,
+    "overall_status": "FAIL",
+    "total_violations": 1,
+    "total_warnings": 3,
+    "total_not_applicable": 0,
+    "max_dc_ratio": 1.014,
+    "action_items": [
+      {
+        "action": "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1",
+        "stories": [
+          "Story1",
+          "Story4"
+        ]
+      },
+      {
+        "action": "Stiffen the structure or revise the design until the story drift is within the limit",
+        "stories": [
+          "Story1"
+        ]
+      },
+      {
+        "action": "Amplify accidental torsion by A_x per 12.8.4.3 and confirm the exported drifts include it",
+        "stories": [
+          "Story4"
+        ]
+      },
+      {
+        "action": "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.4",
+        "stories": [
+          "Story4"
+        ]
+      },
+      {
+        "action": "Use rho = 1.3 per 12.3.4.2 (TIR > 1.4)",
+        "stories": [
+          "Story4"
+        ]
+      }
+    ]
+  },
+  "basis": {
+    "risk_category": "II",
+    "seismic_design_category": "D",
+    "structure_type": "other",
+    "diaphragm": "rigid",
+    "drift_is_amplified": false,
+    "cd": 5.5,
+    "ie": 1.0,
+    "rho_applied_to_drift": null,
+    "drift_limit": 0.02,
+    "drift_limit_basis": "Table 12.12-1, Risk Category II",
+    "apply_soft_story_exception": true,
+    "torsion_strength_irregular": null,
+    "directions_checked": [
+      "X",
+      "Y"
+    ]
+  },
+  "story_results": [
+    {
+      "story_name": "Story1",
+      "elevation_in": 180.0,
+      "height_in": 180.0,
+      "status": "FAIL",
+      "max_dc_ratio": 1.472,
+      "deformations": {
+        "max_drift_x_in": 0.71681,
+        "avg_drift_x_in": 0.66371,
+        "max_drift_y_in": 0.606,
+        "avg_drift_y_in": 0.57714
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.717 in / 0.664 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2, Type 1b",
+          "demand_value": 4972.06,
+          "capacity_limit": 7318.8693,
+          "dc_ratio": 1.472,
+          "status": "WARNING",
+          "formula_breakdown": "K_i / K_(i+1) = 4972.1 / 9546.4 = 0.521 (limit 0.70); K_i / K_avg,3 above = 4972.1 / 9148.6 = 0.543 (limit 0.80) -> below 0.60 / 0.70 (Extreme Soft Story; 12.3.2.2 Exception 1 not met: drift ratio at Story1 is 1.67 x that of the story above > 1.30 (average drifts from output case EQX; 12.3.2.2 permits ignoring torsional effects))",
+          "output_case": "EQX",
+          "actions": [
+            "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1"
+          ]
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.02028,
+          "capacity_limit": 0.02,
+          "dc_ratio": 1.014,
+          "status": "FAIL",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.664 in / 1 = 3.650 in [center of mass, approximated by avg of ends]; Delta / h_sx = 3.650 in / 180.0 in = 0.0203 > 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": [
+            "Stiffen the structure or revise the design until the story drift is within the limit"
+          ]
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.606 in / 0.577 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2, Type 1b",
+          "demand_value": 5717.87,
+          "capacity_limit": 8416.6987,
+          "dc_ratio": 1.472,
+          "status": "WARNING",
+          "formula_breakdown": "K_i / K_(i+1) = 5717.9 / 10978.3 = 0.521 (limit 0.70); K_i / K_avg,3 above = 5717.9 / 10520.9 = 0.543 (limit 0.80) -> below 0.60 / 0.70 (Extreme Soft Story; 12.3.2.2 Exception 1 not met: drift ratio at Story1 is 1.67 x that of the story above > 1.30 (average drifts from output case EQY; 12.3.2.2 permits ignoring torsional effects))",
+          "output_case": "EQY",
+          "actions": [
+            "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1"
+          ]
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01763,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.882,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.577 in / 1 = 3.174 in [center of mass, approximated by avg of ends]; Delta / h_sx = 3.174 in / 180.0 in = 0.0176 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story2",
+      "elevation_in": 336.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.37168,
+        "avg_drift_x_in": 0.34415,
+        "max_drift_y_in": 0.31422,
+        "avg_drift_y_in": 0.29926
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.372 in / 0.344 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 9546.35,
+          "capacity_limit": 7000.6587,
+          "dc_ratio": 0.733,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 9546.4 / 9148.6 = 1.043 (limit 0.70); K_i / K_avg,3 above = 9546.4 / 8750.8 = 1.091 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01213,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.607,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.344 in / 1 = 1.893 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.893 in / 156.0 in = 0.0121 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.314 in / 0.299 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 10978.3,
+          "capacity_limit": 8050.7573,
+          "dc_ratio": 0.733,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 10978.3 / 10520.9 = 1.043 (limit 0.70); K_i / K_avg,3 above = 10978.3 / 10063.4 = 1.091 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01055,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.528,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.299 in / 1 = 1.646 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.646 in / 156.0 in = 0.0106 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story3",
+      "elevation_in": 492.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.38264,
+        "avg_drift_x_in": 0.3543,
+        "max_drift_y_in": 0.32349,
+        "avg_drift_y_in": 0.30809
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.383 in / 0.354 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 9148.59,
+          "capacity_limit": 6682.4453,
+          "dc_ratio": 0.73,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 9148.6 / 8750.8 = 1.045 (limit 0.70); K_i / K_avg,3 above = 9148.6 / 8353.1 = 1.095 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01249,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.625,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.354 in / 1 = 1.949 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.949 in / 156.0 in = 0.0125 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.323 in / 0.308 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 10520.87,
+          "capacity_limit": 7684.816,
+          "dc_ratio": 0.73,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 10520.9 / 10063.5 = 1.045 (limit 0.70); K_i / K_avg,3 above = 10520.9 / 9606.0 = 1.095 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01086,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.543,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.308 in / 1 = 1.694 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.694 in / 156.0 in = 0.0109 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story4",
+      "elevation_in": 648.0,
+      "height_in": 156.0,
+      "status": "WARNING",
+      "max_dc_ratio": 1.25,
+      "deformations": {
+        "max_drift_x_in": 0.54303,
+        "avg_drift_x_in": 0.36202,
+        "max_drift_y_in": 0.33054,
+        "avg_drift_y_in": 0.3148
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.5,
+          "capacity_limit": 1.2,
+          "dc_ratio": 1.25,
+          "status": "WARNING",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.543 in / 0.362 in = 1.500 -> Torsional Irregularity, Type 1 (TIR > 1.20; TIR > 1.40)",
+          "output_case": "EQX",
+          "actions": [
+            "Amplify accidental torsion by A_x per 12.8.4.3 and confirm the exported drifts include it",
+            "Increase design forces for diaphragm connections and collectors by 25% per 12.3.3.4",
+            "Confirm the analysis procedure is permitted for this irregularity per Table 12.6-1",
+            "Use rho = 1.3 per 12.3.4.2 (TIR > 1.4)"
+          ]
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 8750.82,
+          "capacity_limit": 6364.2347,
+          "dc_ratio": 0.727,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 8750.8 / 8353.1 = 1.048 (limit 0.70); K_i / K_avg,3 above = 8750.8 / 7955.3 = 1.100 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01915,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.957,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.543 in / 1 = 2.987 in [edge (max), torsionally irregular]; Delta / h_sx = 2.987 in / 156.0 in = 0.0191 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.331 in / 0.315 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 10063.45,
+          "capacity_limit": 7318.872,
+          "dc_ratio": 0.727,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 10063.5 / 9606.0 = 1.048 (limit 0.70); K_i / K_avg,3 above = 10063.5 / 9148.6 = 1.100 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.0111,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.555,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.315 in / 1 = 1.731 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.731 in / 156.0 in = 0.0111 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story5",
+      "elevation_in": 804.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.39633,
+        "avg_drift_x_in": 0.36697,
+        "max_drift_y_in": 0.33506,
+        "avg_drift_y_in": 0.31911
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.396 in / 0.367 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 8353.06,
+          "capacity_limit": 6046.0213,
+          "dc_ratio": 0.724,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 8353.1 / 7955.3 = 1.050 (limit 0.70); K_i / K_avg,3 above = 8353.1 / 7557.5 = 1.105 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01294,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.647,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.367 in / 1 = 2.018 in [center of mass, approximated by avg of ends]; Delta / h_sx = 2.018 in / 156.0 in = 0.0129 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.335 in / 0.319 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 9606.02,
+          "capacity_limit": 6952.928,
+          "dc_ratio": 0.724,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 9606.0 / 9148.6 = 1.050 (limit 0.70); K_i / K_avg,3 above = 9606.0 / 8691.2 = 1.105 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01125,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.563,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.319 in / 1 = 1.755 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.755 in / 156.0 in = 0.0113 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story6",
+      "elevation_in": 960.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.39823,
+        "avg_drift_x_in": 0.36873,
+        "max_drift_y_in": 0.33666,
+        "avg_drift_y_in": 0.32063
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.398 in / 0.369 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 7955.29,
+          "capacity_limit": 5727.8107,
+          "dc_ratio": 0.72,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 7955.3 / 7557.5 = 1.053 (limit 0.70); K_i / K_avg,3 above = 7955.3 / 7159.8 = 1.111 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.013,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.65,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.369 in / 1 = 2.028 in [center of mass, approximated by avg of ends]; Delta / h_sx = 2.028 in / 156.0 in = 0.0130 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.337 in / 0.321 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 9148.59,
+          "capacity_limit": 6586.984,
+          "dc_ratio": 0.72,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 9148.6 / 8691.2 = 1.053 (limit 0.70); K_i / K_avg,3 above = 9148.6 / 8233.7 = 1.111 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.0113,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.565,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.321 in / 1 = 1.763 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.763 in / 156.0 in = 0.0113 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story7",
+      "elevation_in": 1116.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.39613,
+        "avg_drift_x_in": 0.36679,
+        "max_drift_y_in": 0.33489,
+        "avg_drift_y_in": 0.31894
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.396 in / 0.367 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 7557.53,
+          "capacity_limit": 5409.5973,
+          "dc_ratio": 0.716,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 7557.5 / 7159.8 = 1.056 (limit 0.70); K_i / K_avg,3 above = 7557.5 / 6762.0 = 1.118 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01293,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.647,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.367 in / 1 = 2.017 in [center of mass, approximated by avg of ends]; Delta / h_sx = 2.017 in / 156.0 in = 0.0129 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.335 in / 0.319 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 8691.16,
+          "capacity_limit": 6221.04,
+          "dc_ratio": 0.716,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 8691.2 / 8233.7 = 1.056 (limit 0.70); K_i / K_avg,3 above = 8691.2 / 7776.3 = 1.118 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01124,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.562,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.319 in / 1 = 1.754 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.754 in / 156.0 in = 0.0112 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story8",
+      "elevation_in": 1272.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.38938,
+        "avg_drift_x_in": 0.36053,
+        "max_drift_y_in": 0.32918,
+        "avg_drift_y_in": 0.31351
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.389 in / 0.361 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 7159.76,
+          "capacity_limit": 5091.3867,
+          "dc_ratio": 0.711,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 7159.8 / 6762.0 = 1.059 (limit 0.70); K_i / K_avg,3 above = 7159.8 / 6364.2 = 1.125 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01271,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.636,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.361 in / 1 = 1.983 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.983 in / 156.0 in = 0.0127 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.329 in / 0.314 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 8233.73,
+          "capacity_limit": 5855.096,
+          "dc_ratio": 0.711,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 8233.7 / 7776.3 = 1.059 (limit 0.70); K_i / K_avg,3 above = 8233.7 / 7318.9 = 1.125 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01105,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.553,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.314 in / 1 = 1.724 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.724 in / 156.0 in = 0.0111 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story9",
+      "elevation_in": 1428.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.37714,
+        "avg_drift_x_in": 0.34921,
+        "max_drift_y_in": 0.31884,
+        "avg_drift_y_in": 0.30366
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.377 in / 0.349 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 6762.0,
+          "capacity_limit": 4773.1733,
+          "dc_ratio": 0.706,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 6762.0 / 6364.2 = 1.063 (limit 0.70); K_i / K_avg,3 above = 6762.0 / 5966.5 = 1.133 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01231,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.616,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.349 in / 1 = 1.921 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.921 in / 156.0 in = 0.0123 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.319 in / 0.304 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 7776.3,
+          "capacity_limit": 5489.152,
+          "dc_ratio": 0.706,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 7776.3 / 7318.9 = 1.063 (limit 0.70); K_i / K_avg,3 above = 7776.3 / 6861.4 = 1.133 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01071,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.535,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.304 in / 1 = 1.670 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.670 in / 156.0 in = 0.0107 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story10",
+      "elevation_in": 1584.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.3584,
+        "avg_drift_x_in": 0.33185,
+        "max_drift_y_in": 0.303,
+        "avg_drift_y_in": 0.28857
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.358 in / 0.332 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 6364.23,
+          "capacity_limit": 4454.9627,
+          "dc_ratio": 0.7,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 6364.2 / 5966.5 = 1.067 (limit 0.70); K_i / K_avg,3 above = 6364.2 / 5568.7 = 1.143 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.0117,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.585,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.332 in / 1 = 1.825 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.825 in / 156.0 in = 0.0117 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.303 in / 0.289 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 7318.87,
+          "capacity_limit": 5123.208,
+          "dc_ratio": 0.7,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 7318.9 / 6861.4 = 1.067 (limit 0.70); K_i / K_avg,3 above = 7318.9 / 6404.0 = 1.143 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01017,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.509,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.289 in / 1 = 1.587 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.587 in / 156.0 in = 0.0102 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story11",
+      "elevation_in": 1740.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.33185,
+        "avg_drift_x_in": 0.30727,
+        "max_drift_y_in": 0.28055,
+        "avg_drift_y_in": 0.26719
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.332 in / 0.307 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 5966.47,
+          "capacity_limit": 4136.752,
+          "dc_ratio": 0.693,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 5966.5 / 5568.7 = 1.071 (limit 0.70); K_i / K_avg,3 above = 5966.5 / 5170.9 = 1.154 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.01083,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.542,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.307 in / 1 = 1.690 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.690 in / 156.0 in = 0.0108 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.281 in / 0.267 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 6861.44,
+          "capacity_limit": 4757.264,
+          "dc_ratio": 0.693,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 6861.4 / 6404.0 = 1.071 (limit 0.70); K_i / K_avg,3 above = 6861.4 / 5946.6 = 1.154 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00942,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.471,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.267 in / 1 = 1.470 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.470 in / 156.0 in = 0.0094 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story12",
+      "elevation_in": 1896.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.29582,
+        "avg_drift_x_in": 0.27391,
+        "max_drift_y_in": 0.25009,
+        "avg_drift_y_in": 0.23818
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.296 in / 0.274 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 5568.7,
+          "capacity_limit": 3818.5413,
+          "dc_ratio": 0.686,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 5568.7 / 5170.9 = 1.077 (limit 0.70); K_i / K_avg,3 above = 5568.7 / 4773.2 = 1.167 (limit 0.80) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00966,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.483,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.274 in / 1 = 1.507 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.507 in / 156.0 in = 0.0097 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.250 in / 0.238 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 6404.01,
+          "capacity_limit": 4391.32,
+          "dc_ratio": 0.686,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 6404.0 / 5946.6 = 1.077 (limit 0.70); K_i / K_avg,3 above = 6404.0 / 5489.2 = 1.167 (limit 0.80) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.0084,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.42,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.238 in / 1 = 1.310 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.310 in / 156.0 in = 0.0084 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story13",
+      "elevation_in": 2052.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.24813,
+        "avg_drift_x_in": 0.22975,
+        "max_drift_y_in": 0.20977,
+        "avg_drift_y_in": 0.19978
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.248 in / 0.230 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 5170.94,
+          "capacity_limit": 3341.226,
+          "dc_ratio": 0.646,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 5170.9 / 4773.2 = 1.083 (limit 0.70) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.0081,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.405,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.230 in / 1 = 1.264 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.264 in / 156.0 in = 0.0081 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.210 in / 0.200 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 5946.58,
+          "capacity_limit": 3842.405,
+          "dc_ratio": 0.646,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 5946.6 / 5489.1 = 1.083 (limit 0.70) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00704,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.352,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.200 in / 1 = 1.099 in [center of mass, approximated by avg of ends]; Delta / h_sx = 1.099 in / 156.0 in = 0.0070 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story14",
+      "elevation_in": 2208.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.18584,
+        "avg_drift_x_in": 0.17207,
+        "max_drift_y_in": 0.15711,
+        "avg_drift_y_in": 0.14963
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.186 in / 0.172 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 4773.18,
+          "capacity_limit": 3062.787,
+          "dc_ratio": 0.642,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 4773.2 / 4375.4 = 1.091 (limit 0.70) -> No Soft Story",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00607,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.303,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.172 in / 1 = 0.946 in [center of mass, approximated by avg of ends]; Delta / h_sx = 0.946 in / 156.0 in = 0.0061 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.157 in / 0.150 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Soft Story Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-2",
+          "demand_value": 5489.15,
+          "capacity_limit": 3522.204,
+          "dc_ratio": 0.642,
+          "status": "PASS",
+          "formula_breakdown": "K_i / K_(i+1) = 5489.1 / 5031.7 = 1.091 (limit 0.70) -> No Soft Story",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00528,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.264,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.150 in / 1 = 0.823 in [center of mass, approximated by avg of ends]; Delta / h_sx = 0.823 in / 156.0 in = 0.0053 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    },
+    {
+      "story_name": "Story15",
+      "elevation_in": 2364.0,
+      "height_in": 156.0,
+      "status": "PASS",
+      "max_dc_ratio": 0.9,
+      "deformations": {
+        "max_drift_x_in": 0.10499,
+        "avg_drift_x_in": 0.09721,
+        "max_drift_y_in": 0.08876,
+        "avg_drift_y_in": 0.08453
+      },
+      "checks": [
+        {
+          "check_type": "Torsional Irregularity (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.08,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.9,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.105 in / 0.097 in = 1.080 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (X-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00343,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.171,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.097 in / 1 = 0.535 in [center of mass, approximated by avg of ends]; Delta / h_sx = 0.535 in / 156.0 in = 0.0034 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQX",
+          "actions": []
+        },
+        {
+          "check_type": "Torsional Irregularity (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.3-1, Type 1; Section 12.3.2.1.1",
+          "demand_value": 1.05,
+          "capacity_limit": 1.2,
+          "dc_ratio": 0.875,
+          "status": "PASS",
+          "formula_breakdown": "TIR = Delta_max / Delta_avg = 0.089 in / 0.085 in = 1.050 <= 1.20 -> No Torsional Irregularity; strength criterion (more than 75% of lateral strength on one side of the center of mass) not evaluated, confirm separately",
+          "output_case": "EQY",
+          "actions": []
+        },
+        {
+          "check_type": "Allowable Story Drift (Y-Dir)",
+          "code_reference": "ASCE 7-22 Table 12.12-1",
+          "demand_value": 0.00298,
+          "capacity_limit": 0.02,
+          "dc_ratio": 0.149,
+          "status": "PASS",
+          "formula_breakdown": "Delta = C_d * Delta_e / I_e = 5.5 * 0.085 in / 1 = 0.465 in [center of mass, approximated by avg of ends]; Delta / h_sx = 0.465 in / 156.0 in = 0.0030 <= 0.0200 (Table 12.12-1, Risk Category II)",
+          "output_case": "EQY",
+          "actions": []
+        }
+      ]
+    }
+  ],
+  "project_info": {
+    "building_name": "Los Angeles 15-Story Commercial Tower",
+    "risk_category": "II",
+    "seismic_design_category": "D",
+    "structure_type": "other",
+    "cd": 5.5,
+    "units": {
+      "length": "in",
+      "force": "kips"
+    },
+    "drift_output_cases": {
+      "x": [
+        "EQX"
+      ],
+      "y": [
+        "EQY"
+      ]
+    },
+    "exception_output_case": {
+      "x": "EQX",
+      "y": "EQY"
+    },
+    "stiffness_output_case": {
+      "x": "EQX",
+      "y": "EQY"
+    }
+  }
+}

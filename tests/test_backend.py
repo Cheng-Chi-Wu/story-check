@@ -106,6 +106,75 @@ def test_governing_case_and_case_filter():
         parse_etabs(t, {"risk_category": "II"}, case_x="NOPE")
 
 
+def test_single_field_title_line_is_skipped():
+    # A title line with one field used to crash the CSV tokenizer (reviewer finding).
+    text = "TABLE:  Story Max Over Avg Drifts\nStory,Output Case,Direction,Max Drift,Avg Drift\nS2,EQX,X,0.33,0.30\n"
+    df = read_table(text.encode(), "drifts.csv")
+    assert {"story", "case", "direction", "max_drift", "avg_drift"} <= set(df.columns)
+
+
+def test_tir_is_the_largest_over_cases_not_the_largest_drift_case():
+    t = simple_tables()
+    extra = pd.DataFrame([{"story": "S1", "case": "EQX-Ecc", "direction": "X", "max_drift": "0.30", "avg_drift": "0.15"}])
+    t[1] = pd.concat([t[1], extra], ignore_index=True)
+    b = parse_etabs(t, {"risk_category": "II"})
+    s1 = b["stories"][0]
+    assert s1["max_drift_x_in"] == 0.33 and s1["drift_x_case"] == "EQX"
+    assert s1["tir_x"] == pytest.approx(2.0) and s1["tir_x_case"] == "EQX-Ecc"
+    b["project_info"]["drift_is_amplified"] = True
+    torsion = next(c for c in check_building(b)["story_results"][0]["checks"] if c["check_type"].startswith("Torsional Irregularity (X"))
+    assert torsion["status"] == "WARNING" and torsion["demand_value"] == pytest.approx(2.0)
+
+
+def test_step_type_min_rows_and_item_direction():
+    t = simple_tables()
+    drifts = t[1].drop(columns=["direction"]).assign(item=lambda d: "Diaph D1 " + d["case"].str[-1], step_type="Max")
+    mins = drifts.assign(step_type="Min", max_drift="9.9", avg_drift="9.0")
+    t[1] = pd.concat([drifts, mins], ignore_index=True)
+    s1 = parse_etabs(t, {"risk_category": "II"})["stories"][0]
+    assert s1["max_drift_x_in"] == 0.33 and s1["max_drift_y_in"] == 0.33
+
+
+def test_excel_workbook_with_all_tables_on_separate_sheets():
+    from backend.parser import read_tables
+
+    stories = pd.DataFrame([{"Story": "S2", "Height": 144}, {"Story": "S1", "Height": 180}])
+    drifts = pd.DataFrame(
+        [{"Story": s, "Output Case": "EQ" + d, "Direction": d, "Max Drift": 0.33, "Avg Drift": 0.30} for s in ("S2", "S1") for d in "XY"]
+    )
+    stiff = pd.DataFrame([{"Story": s, "Output Case": "EQX", "Stiff X": 1000, "Stiff Y": 1000} for s in ("S2", "S1")])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf) as xl:
+        for name, df in (("Stories", stories), ("Drifts", drifts), ("Stiffness", stiff)):
+            df.to_excel(xl, sheet_name=name, index=False)
+    found = read_tables(buf.getvalue(), "all.xlsx")
+    assert len(found) == 3
+    assert len(parse_etabs(found, {"risk_category": "II"})["stories"]) == 2
+
+
+def test_negative_drifts_and_wrong_unit_produce_warnings():
+    t = simple_tables()
+    t[1] = t[1].assign(max_drift=lambda d: "-" + d["max_drift"], avg_drift=lambda d: "-" + d["avg_drift"])
+    info = parse_etabs(t, {"risk_category": "II"})["project_info"]
+    assert any("negative drift" in w for w in info["input_warnings"])
+    info = parse_etabs(simple_tables(), {"risk_category": "II"}, length_unit="ft")["project_info"]
+    assert any("length unit" in w for w in info["input_warnings"])
+    assert "input_warnings" not in parse_etabs(simple_tables(), {"risk_category": "II"})["project_info"]
+
+
+def test_stiffness_uses_one_case_for_the_whole_building():
+    t = simple_tables()
+    stiff = pd.DataFrame(
+        [{"story": s, "case": c, "stiff_x": k, "stiff_y": "0", "shear_x": v}
+         for s, c, k, v in (("S1", "EQX", "1000", "500"), ("S2", "EQX", "1000", "300"),
+                            ("S1", "RSX", "4000", "200"), ("S2", "RSX", "9000", "150"))]
+    )
+    t[2] = stiff
+    b = parse_etabs(t, {"risk_category": "II"})
+    assert [s["stiffness_x_kip_in"] for s in b["stories"]] == [1000.0, 1000.0]
+    assert b["project_info"]["stiffness_output_case"]["x"] == "EQX"
+
+
 def test_parser_errors():
     t = simple_tables()
     with pytest.raises(ValueError, match="missing table"):
@@ -117,7 +186,7 @@ def test_parser_errors():
     with pytest.raises(ValueError, match="no header row"):
         read_table(b"a,b\n1,2\n", "x.csv")
     t[1] = t[1][t[1]["story"] != "S1"]
-    with pytest.raises(ValueError, match="missing drift or stiffness data: S1"):
+    with pytest.raises(ValueError, match=r"S1 \(no drift row\)"):
         parse_etabs(t, {})
 
 
@@ -146,7 +215,8 @@ def test_mock_30_story(data):
     assert r["summary"]["overall_status"] == "FAIL"
     f = flagged(r)
     assert ("Story12", "Soft Story Irregularity (X-Dir)", "FAIL") in f
-    assert ("Story20", "Torsional Irregularity (Y-Dir)", "FAIL") in f
+    # ASCE 7-22: a large TIR is an irregularity with consequences, not a prohibition
+    assert ("Story20", "Torsional Irregularity (Y-Dir)", "WARNING") in f
     assert {name for name, _, _ in f} == {"Story12", "Story20"}
 
 
@@ -213,7 +283,7 @@ def test_export_report_docx(data):
     assert "San Francisco 30-Story High-Rise" in text
     assert "Overall result: FAIL" in text
     assert "Seismic Design Category" in cells
-    assert "Output case(s) used, X direction" in cells and "EQX" in cells
+    assert "Output case(s), story drift" in cells and "EQX" in cells
     assert "Engineer of record" in cells
     section = doc.sections[0]
     assert "San Francisco 30-Story High-Rise" in section.header.paragraphs[0].text
@@ -247,7 +317,7 @@ def test_export_report_all_pass_and_bad_body(data):
     )
     resp = client.post("/api/export-report", json=result)
     assert resp.status_code == 200
-    assert "All checks pass" in "\n".join(p.text for p in Document(io.BytesIO(resp.content)).paragraphs)
+    assert "No irregularities or drift exceedances" in "\n".join(p.text for p in Document(io.BytesIO(resp.content)).paragraphs)
     assert client.post("/api/export-report", json={"nope": 1}).status_code == 422
 
 
@@ -259,3 +329,47 @@ def test_report_title_block_fields(data):
     for expected in ("24-117", "Acme Structural", "J. Doe, SE"):
         assert expected in cells
     assert "Project No. 24-117" in doc.sections[0].footer.paragraphs[0].text
+
+
+# ---------- One-direction input and pasted tables ----------
+
+
+def test_one_direction_input_marks_other_direction_not_applicable():
+    t = simple_tables()
+    t[1] = t[1][t[1]["direction"] == "X"]
+    b = parse_etabs(t, {"risk_category": "II", "drift_is_amplified": True})
+    assert "max_drift_y_in" not in b["stories"][0]
+    assert any("Y-direction" in w for w in b["project_info"]["input_warnings"])
+    r = check_building(b)
+    assert r["basis"]["directions_checked"] == ["X"]
+    checks = r["story_results"][0]["checks"]
+    y = [c for c in checks if c["check_type"] == "Y-Direction Checks"]
+    assert len(y) == 1 and y[0]["status"] == "N/A"
+    assert any(c["check_type"] == "Allowable Story Drift (X-Dir)" for c in checks)
+    assert r["story_results"][0]["deformations"]["avg_drift_y_in"] == 0.0
+
+
+def test_no_direction_rows_is_an_error():
+    t = simple_tables()
+    t[1] = t[1].assign(direction="Z")
+    with pytest.raises(ValueError, match="no rows for direction X or Y"):
+        parse_etabs(t, {"risk_category": "II"})
+
+
+def test_pasted_tab_separated_tables():
+    text = "Story\tOutput Case\tDirection\tMax Drift\tAvg Drift\nS2\tEQX\tX\t1,000.5\t900\nS1\tEQX\tX\t0.33\t0.30\n"
+    df = read_table(text.encode(), "pasted-1.txt")
+    assert list(df["max_drift"]) == ["1,000.5", "0.33"]
+    assert {"story", "case", "direction"} <= set(df.columns)
+
+
+def test_frontend_precomputed_samples_match_the_engine():
+    # The site shows these on first visit without calling the API; regenerate with
+    # `python -m backend.mock_data_gen` whenever the engine changes.
+    from pathlib import Path
+
+    from backend.mock_data_gen import sample_result
+
+    for spec in BUILDINGS:
+        stored = json.loads((Path("frontend/public/samples") / spec["folder"] / "result.json").read_text())
+        assert stored == json.loads(json.dumps(sample_result(Path("data") / spec["folder"])))

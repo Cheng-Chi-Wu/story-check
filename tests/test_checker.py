@@ -36,49 +36,86 @@ SOFT_X = "Soft Story Irregularity (X-Dir)"
 DRIFT_X = "Allowable Story Drift (X-Dir)"
 
 
-# ---------- Torsional irregularity, Table 12.3-1 ----------
+# ---------- Torsional irregularity, Table 12.3-1 Type 1 (TIR, Section 12.3.2.1.1) ----------
 
 
 @pytest.mark.parametrize(
-    "max_x, avg_x, status, ref",
+    "max_x, avg_x, status",
     [
-        (1.00, 1.00, "PASS", "Type 1a"),
-        (1.20, 1.00, "PASS", "Type 1a"),  # exactly 1.2 is not "more than 1.2"
-        (1.21, 1.00, "WARNING", "Type 1a"),
-        (1.40, 1.00, "WARNING", "Type 1a"),  # exactly 1.4 is still Type 1a
-        (1.41, 1.00, "WARNING", "Type 1b"),  # permitted in SDC D
+        (1.00, 1.00, "PASS"),
+        (1.20, 1.00, "PASS"),  # exactly 1.2 is not "more than 1.2"
+        (1.21, 1.00, "WARNING"),
+        (1.41, 1.00, "WARNING"),  # ASCE 7-22 has no separate extreme torsional type
     ],
 )
-def test_torsion_thresholds_sdc_d(max_x, avg_x, status, ref):
+def test_torsion_thresholds(max_x, avg_x, status):
     res = check_building(building([story(1, max_x=max_x, avg_x=avg_x)], drift_is_amplified=True))
     c = get(res, "Story 1", TORSION_X)
     assert c["status"] == status
-    assert c["code_reference"].endswith(ref)
+    assert "Type 1;" in c["code_reference"] and "12.3.2.1.1" in c["code_reference"]
+    assert "1b" not in c["code_reference"]
     assert c["demand_value"] == pytest.approx(max_x / avg_x, abs=1e-4)
     assert c["dc_ratio"] == pytest.approx(max_x / avg_x / 1.2, abs=1e-3)
 
 
-@pytest.mark.parametrize("sdc, status", [("B", "WARNING"), ("D", "WARNING"), ("E", "FAIL"), ("F", "FAIL")])
-def test_extreme_torsion_prohibited_only_in_sdc_e_f(sdc, status):
+@pytest.mark.parametrize("sdc", ["B", "D", "E", "F"])
+def test_large_tir_is_never_prohibited(sdc):
     res = check_building(
         building([story(1, max_x=1.5, avg_x=1.0)], drift_is_amplified=True, seismic_design_category=sdc)
     )
-    assert get(res, "Story 1", TORSION_X)["status"] == status
+    assert get(res, "Story 1", TORSION_X)["status"] == "WARNING"
 
 
-def test_ax_note_only_for_sdc_c_to_f():
-    def text(sdc):
-        b = building([story(1, max_x=1.3, avg_x=1.0)], drift_is_amplified=True, seismic_design_category=sdc)
-        return get(check_building(b), "Story 1", TORSION_X)["formula_breakdown"]
+def test_torsion_actions_depend_on_sdc_and_tir():
+    def actions(sdc, ratio):
+        b = building([story(1, max_x=ratio, avg_x=1.0)], drift_is_amplified=True, seismic_design_category=sdc)
+        return " | ".join(get(check_building(b), "Story 1", TORSION_X)["actions"])
 
-    assert "12.8.4.3" in text("C")
-    assert "12.8.4.3" not in text("B")
+    assert "12.8.4.3" in actions("C", 1.3)
+    assert "12.8.4.3" not in actions("B", 1.3)
+    assert "12.8.4.2" in actions("B", 1.5)
+    assert "12.3.3.4" in actions("D", 1.3) and "rho = 1.3" not in actions("D", 1.3)
+    assert "rho = 1.3" in actions("D", 1.5)
+    assert "12.5" in actions("E", 1.3)
 
 
-def test_flexible_diaphragm_skips_torsion():
+def test_strength_criterion_input():
+    regular = story(1, max_x=1.1, avg_x=1.0)
+    c = get(check_building(building([dict(regular)], drift_is_amplified=True)), "Story 1", TORSION_X)
+    assert c["status"] == "PASS" and "not evaluated" in c["formula_breakdown"]
+    c = get(check_building(building([dict(regular)], drift_is_amplified=True, torsion_strength_irregular=False)),
+            "Story 1", TORSION_X)
+    assert c["status"] == "PASS" and "not evaluated" not in c["formula_breakdown"]
+    res = check_building(building([dict(regular)], drift_is_amplified=True, torsion_strength_irregular=True))
+    assert get(res, "Story 1", TORSION_X)["status"] == "WARNING"
+    # Strength-triggered irregularity also moves the drift check to the edge
+    assert get(res, "Story 1", DRIFT_X)["demand_value"] == pytest.approx(1.1 / 144, abs=1e-5)
+
+
+def test_tir_from_parser_overrides_governing_drift_row():
+    s1 = story(1, max_x=0.30, avg_x=0.29)
+    s1.update(tir_x=2.0, tir_x_case="EQX-Ecc")
+    c = get(check_building(building([s1], drift_is_amplified=True)), "Story 1", TORSION_X)
+    assert c["demand_value"] == 2.0 and c["status"] == "WARNING"
+    assert c["output_case"] == "EQX-Ecc"
+
+
+def test_flexible_diaphragm_marks_torsion_not_applicable():
     res = check_building(building([story(1, max_x=1.5, avg_x=1.0)], drift_is_amplified=True, diaphragm="flexible"))
-    types = [c["check_type"] for c in res["story_results"][0]["checks"]]
-    assert TORSION_X not in types
+    c = get(res, "Story 1", TORSION_X)
+    assert c["status"] == "N/A"
+    assert "rigid or semirigid" in c["formula_breakdown"]
+    assert res["summary"]["total_not_applicable"] == 2
+
+
+def test_zero_drift_story_is_not_applicable_not_pass():
+    res = check_building(building([story(1, max_x=0.0, avg_x=0.0)], drift_is_amplified=True))
+    assert get(res, "Story 1", TORSION_X)["status"] == "N/A"
+
+
+def test_zero_average_with_nonzero_max_is_rejected():
+    with pytest.raises(ValueError, match="avg_drift_x_in is zero"):
+        check_building(building([story(1, max_x=0.3, avg_x=0.0)], drift_is_amplified=True))
 
 
 # ---------- Soft story, Table 12.3-2 ----------
@@ -87,7 +124,7 @@ def test_flexible_diaphragm_skips_torsion():
 @pytest.mark.parametrize(
     "k1, status, ref",
     [
-        (700.0, "PASS", "Type 1a"),  # exactly 70% is not "less than 70%"
+        (700.0, "PASS", "Table 12.3-2"),  # exactly 70% is not "less than 70%"
         (690.0, "WARNING", "Type 1a"),
         (600.0, "WARNING", "Type 1a"),  # exactly 60% is still Type 1a
         (590.0, "WARNING", "Type 1b"),
@@ -236,7 +273,7 @@ def test_edge_drift_governs_only_when_torsionally_irregular():
 
 def test_summary_aggregation():
     stories = [
-        story(1, max_x=1.5, avg_x=1.0, kx=500.0),  # extreme torsion + extreme soft story
+        story(1, max_x=1.5, avg_x=1.0, kx=500.0),  # torsional irregularity + extreme soft story
         story(2),
         story(3, max_y=4.0, avg_y=4.0),  # drift 4.0 / 144 = 0.0278 > 0.020
     ]
@@ -245,10 +282,14 @@ def test_summary_aggregation():
     assert s["building_name"] == "Test Tower"
     assert s["total_stories"] == 3
     assert s["overall_status"] == "FAIL"
-    assert s["total_violations"] == 3
+    assert s["total_violations"] == 2  # soft story (prohibited in E) + drift; torsion is a WARNING
     statuses = {r["story_name"]: r["status"] for r in res["story_results"]}
     assert statuses == {"Story 1": "FAIL", "Story 2": "PASS", "Story 3": "FAIL"}
-    assert s["max_dc_ratio"] == max(r["max_dc_ratio"] for r in res["story_results"])
+    # Max D/C is the drift D/C only
+    assert s["max_dc_ratio"] == pytest.approx(4.0 / 144 / 0.020, abs=1e-3)
+    items = {i["action"]: i["stories"] for i in s["action_items"]}
+    assert len(items) == len(s["action_items"])
+    assert any("12.3.3.1" in a and stories == ["Story 1"] for a, stories in items.items())
 
 
 def test_regular_building_passes_everything():
@@ -260,7 +301,7 @@ def test_regular_building_passes_everything():
 
 def test_output_matches_contract_keys():
     res = check_building(building([story(1), story(2)]))
-    assert set(res) == {"summary", "story_results"}
+    assert set(res) == {"summary", "basis", "story_results"}
     sr = res["story_results"][0]
     assert {"story_name", "elevation_in", "height_in", "status", "max_dc_ratio", "deformations", "checks"} == set(sr)
     assert set(sr["checks"][0]) == {
@@ -271,6 +312,8 @@ def test_output_matches_contract_keys():
         "dc_ratio",
         "status",
         "formula_breakdown",
+        "output_case",
+        "actions",
     }
 
 
@@ -288,8 +331,6 @@ def test_invalid_project_info(mutation, message):
 
 
 def test_invalid_story_values():
-    with pytest.raises(ValueError, match="stiffness"):
-        check_building(building([story(1, kx=0.0)]))
     with pytest.raises(ValueError, match="smaller than avg"):
         check_building(building([story(1, max_x=0.2, avg_x=0.3)]))
 
@@ -352,3 +393,52 @@ def test_exception_can_be_switched_off():
     b = soft_building([0.39, 0.30, 0.30, 0.30])
     b["project_info"]["apply_soft_story_exception"] = False
     assert get(check_building(b), "Story 1", SOFT_X)["status"] == "WARNING"
+
+
+# ---------- Input validation and basis (reviewer findings 2026-11-17) ----------
+
+
+@pytest.mark.parametrize("rho", [0.5, 1.2, 3.0])
+def test_rho_must_be_1_0_or_1_3(rho):
+    with pytest.raises(ValueError, match="1.0 or 1.3"):
+        check_building(building([story(1)], drift_is_amplified=True, moment_frame_rho=rho))
+
+
+def test_four_story_limit_rejected_for_taller_buildings():
+    stories = [story(n) for n in range(1, 6)]
+    with pytest.raises(ValueError, match="4 stories or fewer"):
+        check_building(building(stories, drift_is_amplified=True, structure_type="four_story_or_less_drift_tolerant"))
+    check_building(building(stories[:4], drift_is_amplified=True, structure_type="four_story_or_less_drift_tolerant"))
+
+
+def test_zero_or_negative_stiffness_is_not_applicable():
+    stories = [story(1, kx=0.0), story(2), story(3, kx=-50.0), story(4)]
+    res = check_building(building(stories, drift_is_amplified=True))
+    for name in ("Story 1", "Story 2", "Story 3"):
+        c = get(res, name, SOFT_X)
+        assert c["status"] == "N/A"
+        assert "stiffness <= 0" in c["formula_breakdown"]
+
+
+def test_pass_rows_are_not_labelled_with_an_irregularity_type():
+    res = check_building(building([story(1), story(2)], drift_is_amplified=True))
+    for c in res["story_results"][0]["checks"]:
+        if c["status"] == "PASS" and "Soft" in c["check_type"]:
+            assert "Type" not in c["code_reference"]
+
+
+def test_basis_records_resolved_defaults():
+    b = building([story(1)], risk_category="III")
+    basis = check_building(b)["basis"]
+    assert basis["ie"] == 1.25 and basis["diaphragm"] == "rigid" and basis["seismic_design_category"] == "D"
+    assert basis["drift_limit"] == 0.015
+    assert basis["torsion_strength_irregular"] is None
+
+
+def test_exception_uses_single_case_drifts_when_given():
+    b = soft_building([0.40, 0.30, 0.30, 0.30])  # envelope drifts would fail Exception 1 (1.33)
+    for st, d in zip(b["stories"], [0.36, 0.30, 0.30, 0.30]):  # one consistent case: 1.20
+        st["exc_drift_x_in"] = d
+        st["exc_drift_x_case"] = "EQX"
+    c = get(check_building(b), "Story 1", SOFT_X)
+    assert c["status"] == "PASS" and "output case EQX" in c["formula_breakdown"]
