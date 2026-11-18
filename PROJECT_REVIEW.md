@@ -29,7 +29,7 @@
 | Word 計算書 | 完成，**未在 Microsoft Word 中檢視過完整版面** |
 | 前端（含 3D） | 完成，已在瀏覽器手動測試 |
 | 測試 | 後端共 74 個案例全數通過；前端沒有自動化測試 |
-| 部署 | 設定檔已備妥（Render + Vercel），尚未上線 |
+| 部署 | 已上線（前端 Vercel、後端 Render 免費方案），線上已實測範例分析與報告匯出 |
 | 使用者驗證 | **零**。沒有任何結構工程師看過或用過 |
 | 規範條文核對 | **未做**。所有限值與條文編號由 AI 依記憶寫成，未對照 ASCE 7-22 正式文本 |
 
@@ -206,9 +206,35 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 
 ## 7. 使用步驟
 
-### 7.1 終端使用者（網頁）
+### 7.1 從 ETABS 匯出資料
 
-1. 在 ETABS：`Display → Show Tables`，勾選 Story Definitions、Story Max Over Avg Drifts、Story Stiffness，選擇含偶發偏心的地震力工況，匯出成 CSV 或 Excel。
+需要 3 張表，存成 CSV 或 Excel 都可以：
+
+| 表格名稱 | 在 ETABS 表格清單裡的位置 | 用途 |
+| :--- | :--- | :--- |
+| Story Definitions | Model → Building Data → Story Definitions | 樓層名稱、層高、標高 |
+| Story Max Over Avg Drifts | Analysis Results → Displacements | 每層最大與平均層間變位，用於扭轉與變位角檢核 |
+| Story Stiffness | Analysis Results → Structure Results | 每層勁度，用於軟弱層檢核 |
+
+步驟：
+
+1. 跑完分析後按 `Ctrl+T`（`Display → Show Tables`）。
+2. 勾選上面 3 張表。
+3. 載重工況選 X 向與 Y 向的地震工況（例如 EQX、EQY），建議用含偶發偏心的等值側力（ELF）工況。
+4. `File → Export to Excel`（或 CSV）。每張表各存一個檔，或全部放在同一個 Excel 都可以。
+
+注意：
+
+- **單位**：建議設成 kip-in；用其他單位時，在網頁上選對應的單位。
+- **變位是否已放大**：ETABS 預設輸出彈性變位 δe。若在 ETABS 裡已乘過 Cd/Ie，網頁上要勾選「Exported drifts already include Cd / Ie」。
+- **ETABS 表格沒有、要在網頁上填的資料**：風險類別、SDC、Cd、Ie、結構類型、樓板剛性假設；彎矩構架另需填 ρ。
+- **選單路徑與表格名稱是依記憶寫的**，不同 ETABS 版本可能略有不同，找不到時在表格清單裡搜尋表名。
+
+### 7.2 終端使用者（網頁）
+
+網址：https://story-check-virid.vercel.app
+
+1. 依 7.1 從 ETABS 匯出 3 張表。
 2. 打開網頁，把三個檔案拖進左上角的框（或點「載入範例大樓」直接看效果）。
 3. 填專案參數：風險類別、SDC、結構類型、樓板類型、Cd（若匯出的變位已放大則勾選該選項）、檔案使用的單位。
 4. 選填報告標題欄：專案編號、事務所、製作人、審核人。
@@ -218,7 +244,7 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
    - 右欄：四個總結數字，以及由上而下的樓層清單。點任一層展開六項檢核的條文與公式。
 7. 按右上角「Download calculation report (.docx)」取得計算書。
 
-### 7.2 開發者（本機）
+### 7.3 開發者（本機）
 
 需求：Python 3.10+、Node 20+。
 
@@ -250,7 +276,9 @@ curl -X POST localhost:8000/api/export-report \
 
 `/api/analyze` 另接受表單欄位 `length_unit`（in/ft/mm/cm/m）、`force_unit`（kip/lb/kN/N）、`case_x`、`case_y`。錯誤一律回 422，`detail` 是可直接顯示的訊息。
 
-### 7.3 部署
+### 7.4 部署
+
+目前線上：前端 https://story-check-virid.vercel.app ，後端 https://story-check-api.onrender.com 。推送到 GitHub `main` 分支後兩邊會自動重新部署。
 
 - 後端：Render 讀取根目錄的 `render.yaml`。環境變數 `CORS_ORIGINS` 設為前端網址；`CORS_ORIGIN_REGEX` 選填。
 - 前端：Vercel，Root Directory 設為 `frontend`，環境變數 `NEXT_PUBLIC_API_URL` 設為後端網址。
