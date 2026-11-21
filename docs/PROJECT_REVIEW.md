@@ -70,7 +70,7 @@ frontend/
   lib/api.ts, lib/types.ts
   public/samples/               三棟範例大樓（供「載入範例」按鈕使用）
 data/                           模擬資料與範例輸出
-structural_code_check_copilot_blueprint.md   原始藍圖（含數據契約）
+docs/                           本文件、原始藍圖（含數據契約）、審查報告 docs/reviews/
 render.yaml                     後端部署設定
 ```
 
@@ -281,7 +281,7 @@ Table 12.3-1 的其他類型（凹角、樓板不連續、面外偏移、非平�
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m pytest -q                        # 74 passed
+.venv/bin/python -m pytest -q
 .venv/bin/python -m backend.mock_data_gen            # 重新產生 data/ 下的模擬資料
 .venv/bin/python -m uvicorn backend.main:app --port 8000
 ```
@@ -370,7 +370,7 @@ curl -X POST localhost:8000/api/export-report \
 
 ## 12. 2026-11-17 審查意見處理紀錄
 
-三份審查：Codex（`STORY_CHECK_REVIEW_2026-11-17.md`）、Muse（`Story_Check_審查報告_2026-11-17.md`）、Gemini（`gemini_story_check_full_review_ui_ux_guide.md`）。三份都確認算術正確，問題集中在規範版本與輸入防呆。
+三份審查：Codex（`reviews/round-1/codex.md`）、Muse（`reviews/round-1/muse.md`）、Gemini（`reviews/round-1/gemini.md`）。三份都確認算術正確，問題集中在規範版本與輸入防呆。
 
 **已修正**
 

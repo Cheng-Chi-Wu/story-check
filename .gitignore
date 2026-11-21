@@ -5,3 +5,8 @@ __pycache__/
 *.pyc
 .env
 .env.*
+
+# Local working files
+review_v2_evidence/
+linkedin_post.txt
+linkedin_screenshots/
